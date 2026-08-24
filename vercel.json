@@ -3,17 +3,16 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
-    "api/me.js": {
-      "includeFiles": "dist-server/**"
-    },
-    "api/[[...path]].js": {
-      "includeFiles": "dist-server/**"
-    }
+    "api/index.js": { "includeFiles": "dist-server/**" },
+    "api/me.js": { "includeFiles": "dist-server/**" },
+    "api/auth/[action].js": { "includeFiles": "dist-server/**" },
+    "api/incubations.js": { "includeFiles": "dist-server/**" },
+    "api/incubations/join.js": { "includeFiles": "dist-server/**" },
+    "api/incubations/[id].js": { "includeFiles": "dist-server/**" },
+    "api/incubations/[id]/chambers/[chamber]/fingerprint.js": { "includeFiles": "dist-server/**" }
   },
   "rewrites": [
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

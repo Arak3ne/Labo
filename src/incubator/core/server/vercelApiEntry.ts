@@ -1,11 +1,11 @@
-import vercelHandler from "../dist-server/vercelHandler.js";
+import vercelHandler from "./vercelHandler.js";
 
 export const config = {
   runtime: "nodejs",
   maxDuration: 10,
 };
 
-export async function GET(request) {
+export async function GET(request: Request): Promise<Response> {
   try {
     return await vercelHandler(request);
   } catch (error) {
@@ -14,4 +14,4 @@ export async function GET(request) {
   }
 }
 
-export { GET as POST, GET as PUT, GET as PATCH, GET as DELETE };
+export { GET as POST, GET as PUT, GET as PATCH, GET as DELETE, GET as HEAD };

@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   publicDir: false,
   build: {
-    ssr: "src/incubator/core/server/vercelHandler.ts",
+    ssr: "src/incubator/core/server/vercelApiEntry.ts",
     outDir: "dist-server",
     emptyOutDir: true,
     minify: false,
@@ -13,7 +13,7 @@ export default defineConfig({
       external: ["ws"],
       output: {
         format: "es",
-        entryFileNames: "vercelHandler.js",
+        entryFileNames: "apiEntry.js",
       },
     },
   },
