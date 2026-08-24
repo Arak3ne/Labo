@@ -1049,24 +1049,47 @@ const api: IncubatorSceneApi = {
     });
   },
   accessTerminalFocus() {
-    if (visual.phase === "accessTerminal" && visual.accessScan < 0.01) return;
     fingerprintSyncActive = false;
     interactionsLocked = true;
     visual.phase = "accessTerminal";
     visual.revealCode = null;
     play((timeline) => {
+      moveCamera(
+        timeline,
+        accessTerminalCam,
+        accessTerminalLook,
+        1.28,
+        "power3.inOut",
+      );
       timeline.to(
         visual,
         {
-          accessTerminal: 1,
-          accessScan: 0,
-          accessUnlock: accessSessionGranted ? 0.4 : 0,
+          subjectPresence: 0,
           leftEmphasis: 0,
           rightEmphasis: 0,
           analysis: 0,
           scanVisible: 0,
+          scanOffset: 0,
           revealPower: 0,
           glyphOpacity: 0,
+          lockAmount: 0,
+          hatchOpen: 0.84,
+          flicker: 0,
+          residualScan: 0,
+          blackout: 0,
+          glitch: 0,
+          chroma: 0,
+          vapor: 0.1,
+          leftFingerprint: 0,
+          rightFingerprint: 0,
+          leftFingerprintScan: 0,
+          rightFingerprintScan: 0,
+          leftFingerprintEnergy: 0,
+          rightFingerprintEnergy: 0,
+          fingerprintSync: 0,
+          accessTerminal: 1,
+          accessScan: 0,
+          accessUnlock: accessSessionGranted ? 0.4 : 0,
           ringVelocity: 0.07,
           coreEnergy: 0.18,
           energyFlow: 0.06,
@@ -1075,6 +1098,13 @@ const api: IncubatorSceneApi = {
           pulse: 0.22,
           keyIntensity: 0.14,
           idleDrift: 0,
+          labPresence: 1,
+          airlockPresence: 0,
+          moruePresence: 0,
+          diagnosticScan: 0,
+          tintR: restColor.r,
+          tintG: restColor.g,
+          tintB: restColor.b,
           duration: 0.9,
           ease: "power2.out",
         },
@@ -1603,7 +1633,7 @@ const api: IncubatorSceneApi = {
     accessSessionGranted = false;
     accessGrantPresented = false;
     interactionsLocked = true;
-    api.idle();
+    api.accessTerminalFocus();
   },
 };
 

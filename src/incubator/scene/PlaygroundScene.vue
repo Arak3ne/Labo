@@ -124,7 +124,7 @@ function onReady(value: IncubatorSceneApi) {
       value.revealResult(code);
     },
     reset() {
-      lastAccessCommand = null;
+      lastAccessCommand = "accessTerminalFocus";
       accessGrantedPlayed = false;
       audio.reset();
       value.reset();

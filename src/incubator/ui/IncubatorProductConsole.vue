@@ -27,6 +27,7 @@ const props = defineProps<{
   error: string | null;
   lastCode: "0" | "1" | "M" | null;
   syncProgress: number;
+  syncRemainingMs: number;
   historyOpen: boolean;
   sessionLoading: boolean;
   accessCode: string;
@@ -72,6 +73,18 @@ const canApply = computed(() =>
     (!props.ownChamber || props.ownChamber === props.activeChamber),
   ),
 );
+const syncCountdown = computed(() => (Math.max(0, props.syncRemainingMs) / 1000).toFixed(1));
+const syncReleaseReady = computed(() =>
+  (props.phase === "syncing" && props.syncRemainingMs <= 0)
+  || (props.phase === "analyze" && Boolean(props.localHeldChamber)),
+);
+const holdPrompt = computed(() => {
+  if (props.phase === "analyze" && props.localHeldChamber) return "RELÂCHER LE CONTACT";
+  if (props.phase === "syncing" && props.syncRemainingMs <= 0) return "RELÂCHER";
+  if (props.phase === "syncing") return "MAINTENIR LE CONTACT";
+  if (activeOccupant.value?.pressed) return "EMPREINTE DÉTECTÉE";
+  return "CAPTEUR EN ATTENTE";
+});
 const introClock = ref(0);
 const introTick = ref(0);
 let introClockTimer = 0;
@@ -453,40 +466,44 @@ onUnmounted(() => {
         </p>
       </section>
 
-      <template v-else-if="phase !== 'analyze'">
-        <button
-          v-for="side in (['left', 'right'] as const)"
-          :key="side"
-          type="button"
-          class="incubator-anchor-label"
-          :class="{
-            'is-hovered': hoveredChamber === side,
-            'is-loaded': chamberSubject(side),
-            'is-pressed': occupant(side)?.pressed,
-          }"
-          :style="anchorStyle(anchors[side])"
-          :data-chamber="side"
-          :aria-label="`Cuve ${side === 'left' ? 'A' : 'B'} — ${
-            chamberSubject(side) ? `occupée par ${chamberSubject(side)}` : 'vide'
-          }`"
-          @click.stop="emit('chamber', side)"
-        >
-          <span class="incubator-anchor-label__side">CUVE {{ side === "left" ? "A" : "B" }}</span>
-          <strong v-if="chamberSubject(side)">{{ chamberSubject(side) }}</strong>
-          <span v-else>VIDE · DISPONIBLE</span>
-          <small v-if="occupant(side)?.pressed">EMPREINTE DÉTECTÉE</small>
-          <small v-else-if="occupant(side)">CONTACT INTERROMPU</small>
-        </button>
+      <template v-else-if="phase !== 'analyze' || localHeldChamber">
+        <template v-if="phase !== 'analyze'">
+          <button
+            v-for="side in (['left', 'right'] as const)"
+            :key="side"
+            type="button"
+            class="incubator-anchor-label"
+            :class="{
+              'is-hovered': hoveredChamber === side,
+              'is-loaded': chamberSubject(side),
+              'is-pressed': occupant(side)?.pressed,
+            }"
+            :style="anchorStyle(anchors[side])"
+            :data-chamber="side"
+            :aria-label="`Cuve ${side === 'left' ? 'A' : 'B'} — ${
+              chamberSubject(side) ? `occupée par ${chamberSubject(side)}` : 'vide'
+            }`"
+            @click.stop="emit('chamber', side)"
+          >
+            <span class="incubator-anchor-label__side">CUVE {{ side === "left" ? "A" : "B" }}</span>
+            <strong v-if="chamberSubject(side)">{{ chamberSubject(side) }}</strong>
+            <span v-else>VIDE · DISPONIBLE</span>
+            <small v-if="occupant(side)?.pressed">EMPREINTE DÉTECTÉE</small>
+            <small v-else-if="occupant(side)">CONTACT INTERROMPU</small>
+          </button>
+        </template>
 
         <section
           v-if="activeChamber"
           class="incubator-float-panel incubator-fingerprint-hud"
+          :class="{ 'is-release': syncReleaseReady }"
           :style="hudStyle(anchors[activeChamber])"
           role="dialog"
           :aria-label="`Capteur biométrique cuve ${activeChamber === 'left' ? 'A' : 'B'}`"
           @click.stop
         >
           <button
+            v-if="phase !== 'analyze'"
             class="incubator-panel-close"
             type="button"
             aria-label="Fermer le capteur biométrique"
@@ -505,10 +522,15 @@ onUnmounted(() => {
             v-if="canApply"
             type="button"
             class="incubator-fingerprint-ring incubator-fingerprint-surface"
-            :class="{ 'is-scanning': localHeldChamber === activeChamber, 'is-detected': activeOccupant?.pressed }"
+            :class="{
+              'is-scanning': localHeldChamber === activeChamber,
+              'is-detected': activeOccupant?.pressed,
+              'is-syncing': phase === 'syncing',
+            }"
+            :style="phase === 'syncing' ? { '--sync': syncProgress } : undefined"
             data-fingerprint-hold
             :aria-pressed="localHeldChamber === activeChamber"
-            :aria-label="`Capteur biométrique cuve ${activeChamber === 'left' ? 'A' : 'B'} — maintenir le contact`"
+            :aria-label="holdPrompt"
             @click.prevent
             @pointerdown="beginPointer($event, activeChamber)"
             @pointerup="endPointer"
@@ -518,6 +540,11 @@ onUnmounted(() => {
             @keyup="endKey"
           >
             <span />
+            <b
+              v-if="phase === 'syncing'"
+              class="incubator-sync-countdown"
+              data-sync-countdown
+            >{{ syncCountdown }}</b>
           </button>
           <div
             v-else
@@ -534,9 +561,11 @@ onUnmounted(() => {
             <small>{{ activeOccupant.pressed ? "EMPREINTE DÉTECTÉE" : "CONTACT INTERROMPU" }}</small>
           </template>
           <template v-else>
-            <strong v-if="activeOccupant?.pressed">EMPREINTE DÉTECTÉE</strong>
-            <strong v-else>CAPTEUR EN ATTENTE</strong>
-            <span v-if="activeOccupant?.pressed">EN ATTENTE DE LA SECONDE EMPREINTE</span>
+            <strong>{{ holdPrompt }}</strong>
+            <span v-if="phase === 'syncing' && !syncReleaseReady">JUSQU’À L’ANALYSE</span>
+            <span v-else-if="phase === 'analyze' && localHeldChamber">ANALYSE EN COURS</span>
+            <span v-else-if="syncReleaseReady">LÂCHEZ LES CONTACTS</span>
+            <span v-else-if="activeOccupant?.pressed">EN ATTENTE DE LA SECONDE EMPREINTE</span>
           </template>
         </section>
 
@@ -552,9 +581,17 @@ onUnmounted(() => {
             :style="{ '--sync': syncProgress }"
           >
             <span />
+            <b
+              class="incubator-sync-countdown"
+              data-sync-countdown
+            >{{ syncCountdown }}</b>
           </div>
-          <strong>SYNCHRONISATION</strong>
-          <small>DOUBLE CONTACT BIOMÉTRIQUE</small>
+          <strong>{{ syncReleaseReady ? "RELÂCHER" : "SYNCHRONISATION" }}</strong>
+          <small>{{
+            syncReleaseReady
+              ? "LÂCHEZ LES DEUX CONTACTS"
+              : "MAINTENIR LE DOUBLE CONTACT"
+          }}</small>
         </section>
 
         <section
@@ -563,8 +600,6 @@ onUnmounted(() => {
           :style="anchorStyle(anchors.core)"
           data-reveal-code
         >
-          <span>RÉSULTAT PUBLIC</span>
-          <strong>{{ lastCode }}</strong>
           <button
             type="button"
             class="incubator-result-reset"
@@ -671,12 +706,12 @@ onUnmounted(() => {
       </template>
 
       <p
-        v-else
+        v-if="phase === 'analyze'"
         class="incubator-analysis-status"
         role="status"
         aria-live="polite"
       >
-        <strong>DOUBLE EMPREINTE CONFIRMÉE</strong>
+        <strong>{{ localHeldChamber ? "RELÂCHER LE CONTACT" : "DOUBLE EMPREINTE CONFIRMÉE" }}</strong>
         <span>ANALYSE EN COURS</span>
       </p>
     </template>

@@ -80,7 +80,12 @@ export function useIncubatorConsole(
   const error = ref<ConsoleError | null>(null);
   const lastSceneCommand = ref("idle");
   const lastCode = ref<"0" | "1" | "M" | null>(null);
+  const syncDurationMs = options.syncDurationMs ?? 1_800;
   const syncProgress = ref(0);
+  const syncRemainingMs = computed(() => {
+    if (phase.value !== "syncing") return 0;
+    return Math.max(0, Math.round((1 - syncProgress.value) * syncDurationMs));
+  });
   const historyOpen = ref(false);
   const sessionLoading = ref(false);
   const accessCode = ref("");
@@ -366,7 +371,7 @@ export function useIncubatorConsole(
     const started = Date.now();
     syncProgress.value = 0.01;
     syncTimer = globalThis.setInterval(() => {
-      syncProgress.value = Math.min(1, (Date.now() - started) / (options.syncDurationMs ?? 1800));
+      syncProgress.value = Math.min(1, (Date.now() - started) / syncDurationMs);
     }, 40);
   }
 
@@ -452,7 +457,7 @@ export function useIncubatorConsole(
     if (next.state === "ANALYZING") {
       if (phase.value !== "analyze") {
         phase.value = "analyze";
-        activeChamber.value = null;
+        if (!localHeldChamber.value) activeChamber.value = null;
         orchestrate("fingerprintConfirmed", (scene) => scene.fingerprintConfirmed());
         orchestrate("startAnalysis", (scene) => scene.startAnalysis());
         void voice?.preload("results");
@@ -518,6 +523,7 @@ export function useIncubatorConsole(
     const side = localHeldChamber.value;
     if (!side) return;
     localHeldChamber.value = null;
+    if (phase.value === "analyze") activeChamber.value = null;
     orchestrate("fingerprintRelease", (scene) => scene.fingerprintRelease(side));
     try {
       const result = await client[mode](side);
@@ -599,6 +605,7 @@ export function useIncubatorConsole(
     error,
     lastCode,
     syncProgress,
+    syncRemainingMs,
     historyOpen,
     sessionLoading,
     accessCode,

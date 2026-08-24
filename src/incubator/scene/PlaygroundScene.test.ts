@@ -82,3 +82,19 @@ describe("PlaygroundScene M.O.R.U.E. intro bridge", () => {
     expect(rigSource).toContain("<MorueVoid");
   });
 });
+
+describe("PlaygroundScene reset camera", () => {
+  it("returns the camera to the access terminal on focus and reset", () => {
+    const focusBody = rigSource.match(
+      /accessTerminalFocus\(\) \{([\s\S]*?)\n {2}\},\n {2}accessScanStart/,
+    )?.[1];
+    const resetBody = source.match(/reset\(\) \{([\s\S]*?)\n {4}\},/)?.[1];
+
+    expect(focusBody).toContain("moveCamera");
+    expect(focusBody).toContain("accessTerminalCam");
+    expect(focusBody).toContain("accessTerminalLook");
+    expect(resetBody).toContain('lastAccessCommand = "accessTerminalFocus"');
+    expect(resetBody).toContain("value.reset()");
+    expect(rigSource).toContain("api.accessTerminalFocus()");
+  });
+});

@@ -461,6 +461,51 @@ describe("server-backed Incubator console", () => {
     test.scope.stop();
   });
 
+  it("counts down the dual-hold sync and keeps the sensor until release", async () => {
+    const test = harness();
+    test.state.selectAccessMode("initiate");
+    test.state.updateAccessCode("Z9-Z9");
+    await vi.advanceTimersByTimeAsync(20);
+    const ready = room([projection.player, participant2]);
+    test.client.push(ready);
+    await vi.advanceTimersByTimeAsync(20);
+    test.state.openChamber("left");
+    await test.state.pressFingerprint("left");
+
+    test.client.push({
+      ...ready,
+      state: "SYNCING",
+      chambers: {
+        left: { subjectId: projection.player.id, pressed: true },
+        right: { subjectId: participant2.id, pressed: true },
+      },
+    });
+
+    expect(test.state.phase.value).toBe("syncing");
+    expect(test.state.syncRemainingMs.value).toBeGreaterThan(1500);
+    expect(test.state.activeChamber.value).toBe("left");
+
+    await vi.advanceTimersByTimeAsync(1800);
+    expect(test.state.syncProgress.value).toBe(1);
+    expect(test.state.syncRemainingMs.value).toBe(0);
+
+    test.client.push({
+      ...ready,
+      state: "ANALYZING",
+      chambers: {
+        left: { subjectId: projection.player.id, pressed: true },
+        right: { subjectId: participant2.id, pressed: true },
+      },
+    });
+    expect(test.state.phase.value).toBe("analyze");
+    expect(test.state.activeChamber.value).toBe("left");
+
+    await test.state.stopFingerprint();
+    expect(test.state.activeChamber.value).toBeNull();
+    expect(test.state.localHeldChamber.value).toBeNull();
+    test.scope.stop();
+  });
+
   it.each([
     ["0", "result_0"],
     ["1", "result_1"],

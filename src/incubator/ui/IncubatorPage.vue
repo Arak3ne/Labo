@@ -90,6 +90,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown));
       :error="consoleState.error.value"
       :last-code="consoleState.lastCode.value"
       :sync-progress="consoleState.syncProgress.value"
+      :sync-remaining-ms="consoleState.syncRemainingMs.value"
       :history-open="consoleState.historyOpen.value"
       :session-loading="consoleState.sessionLoading.value"
       :access-code="consoleState.accessCode.value"

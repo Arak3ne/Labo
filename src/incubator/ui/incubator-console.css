@@ -376,9 +376,6 @@
 .incubator-result {
   display: grid;
   justify-items: center;
-  gap: 0.25rem;
-  color: var(--mcu-energy);
-  text-shadow: 0 0 1.5rem currentColor;
 }
 
 .incubator-fingerprint-hud {
@@ -449,6 +446,29 @@ button.incubator-fingerprint-ring {
   background: linear-gradient(90deg, transparent, var(--mcu-energy), transparent);
   box-shadow: 0 0 12px var(--mcu-glow);
   opacity: 0.35;
+}
+
+.incubator-sync-countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: var(--mcu-white);
+  font-size: 1.35rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 1.1rem var(--mcu-glow);
+  pointer-events: none;
+}
+
+.incubator-fingerprint-sync .incubator-sync-countdown {
+  font-size: 1.7rem;
+}
+
+.incubator-fingerprint-hud.is-release {
+  color: var(--mcu-energy);
 }
 
 .incubator-fingerprint-ring.is-scanning span {
@@ -552,17 +572,6 @@ button.incubator-fingerprint-ring {
   background: transparent;
   font: inherit;
   cursor: pointer;
-}
-
-.incubator-result span {
-  font-size: 0.55rem;
-  letter-spacing: 0.25em;
-}
-
-.incubator-result strong {
-  font-size: clamp(4rem, 10vw, 8rem);
-  font-weight: 300;
-  line-height: 0.9;
 }
 
 .incubator-result-reset {
