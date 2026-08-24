@@ -8,11 +8,11 @@ import type {
   IncubatorRunRecord,
   IncubatorSession,
 } from "../../types";
-import { getAccessCounter, isAdminSession, resolveSession, tryConsumeAccess } from "../access";
-import { createConsentRecord, setConsentStance } from "../consent";
-import type { IncubatorMemoryStore } from "../store";
-import { cloneRun } from "../store";
-import { computeRevealCode } from "./compare";
+import { getAccessCounter, isAdminSession, resolveSession, tryConsumeAccess } from "../access.js";
+import { createConsentRecord, setConsentStance } from "../consent.js";
+import type { IncubatorMemoryStore } from "../store.js";
+import { cloneRun } from "../store.js";
+import { computeRevealCode } from "./compare.js";
 
 export interface IncubatorFingerprintScheduler {
   schedule(callback: () => void, delayMs: number): () => void;

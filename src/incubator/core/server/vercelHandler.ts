@@ -1,10 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createMemoryAccessGrantLedger } from "./accessGrantLedger";
+import { createMemoryAccessGrantLedger } from "./accessGrantLedger.js";
+import { isFetchRequest } from "./fetchAdapter.js";
 import {
   createIncubatorNodeServer,
   loadIncubatorServerConfig,
   type IncubatorNodeServer,
-} from "./nodeServer";
+} from "./nodeServer.js";
 
 const globalForLabo = globalThis as typeof globalThis & {
   __laboIncubatorServer?: IncubatorNodeServer;
@@ -35,27 +36,24 @@ export function getIncubatorServer(): IncubatorNodeServer {
   return globalForLabo.__laboIncubatorServer;
 }
 
-function isFetchRequest(value: unknown): value is Request {
-  return typeof Request !== "undefined" && value instanceof Request;
-}
-
 export default async function vercelHandler(
   request: Request | IncomingMessage,
   response?: ServerResponse,
 ): Promise<Response | void> {
   const app = getIncubatorServer();
   try {
-    if (response && !isFetchRequest(request)) {
+    if (isFetchRequest(request)) {
+      return await app.dispatchWeb(request);
+    }
+    if (response) {
       request.url = vercelRequestUrl(request);
       await app.dispatch(request, response);
       return;
     }
-    if (isFetchRequest(request)) {
-      return await app.dispatchWeb(request);
-    }
     request.url = vercelRequestUrl(request);
+    const host = request.headers.host ?? "localhost";
     return await app.dispatchWeb(
-      new Request(`http://${request.headers.host ?? "localhost"}${request.url}`, {
+      new Request(`http://${host}${request.url}`, {
         method: request.method ?? "GET",
       }),
     );

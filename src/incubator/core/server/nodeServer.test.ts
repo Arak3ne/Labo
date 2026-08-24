@@ -154,6 +154,46 @@ describe("authoritative incubator Node server", () => {
     await isolated.close();
   });
 
+  it("answers GET /api/me without waiting for a request body", async () => {
+    const isolated = createIncubatorNodeServer({
+      config: baseConfig,
+      store: createMemoryStore(1),
+      verifyPlayerCode: async () => undefined,
+      accessGrantLedger: createMemoryAccessGrantLedger(),
+    });
+    const hanging = {
+      method: "GET",
+      url: "http://localhost/api/me",
+      headers: new Headers(),
+      arrayBuffer: () => new Promise<ArrayBuffer>(() => {}),
+    } as Request;
+    const response = await Promise.race([
+      isolated.dispatchWeb(hanging),
+      new Promise<Response>((_, reject) => {
+        setTimeout(() => reject(new Error("timed_out")), 200);
+      }),
+    ]);
+    expect(response.status).toBe(401);
+    await isolated.close();
+  });
+
+  it("reads POST login bodies over the fetch adapter", async () => {
+    const isolated = createIncubatorNodeServer({
+      config: baseConfig,
+      store: createMemoryStore(1),
+      verifyPlayerCode: async (playerCode) => testCodes.get(playerCode),
+      accessGrantLedger: createMemoryAccessGrantLedger(),
+    });
+    const response = await isolated.dispatchWeb(new Request("http://localhost/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ playerCode: "TEST-A1" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("labo_session=");
+    await isolated.close();
+  });
+
   async function login(playerCode: string): Promise<HttpResult> {
     return call("POST", "/api/auth/login", { playerCode });
   }

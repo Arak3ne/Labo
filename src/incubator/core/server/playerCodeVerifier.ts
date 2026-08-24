@@ -2,7 +2,7 @@ import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import {
   CANONICAL_PLAYER_CODE_HASHES,
   type PlayerCodeHashEntry,
-} from "./playerCodeHashes";
+} from "./playerCodeHashes.js";
 
 const KEY_LENGTH = 32;
 const MAX_MEMORY = 64 * 1024 * 1024;

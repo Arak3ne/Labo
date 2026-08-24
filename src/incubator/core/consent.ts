@@ -5,9 +5,9 @@ import type {
   IncubatorSession,
   IncubatorSubjectId,
 } from "../types";
-import { isAdminSession } from "./access";
-import type { IncubatorMemoryStore } from "./store";
-import { cloneConsent } from "./store";
+import { isAdminSession } from "./access.js";
+import type { IncubatorMemoryStore } from "./store.js";
+import { cloneConsent } from "./store.js";
 
 function partyIds(
   operatorId: string,

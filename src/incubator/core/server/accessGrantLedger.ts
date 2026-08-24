@@ -61,7 +61,7 @@ function parseLedger(path: string): Set<string> {
     if (isMissingFileError(error)) {
       return new Set();
     }
-    throw new Error("invalid_access_ledger");
+    throw new Error("invalid_access_ledger", { cause: error });
   }
   if (
     typeof parsed !== "object"

@@ -4,8 +4,8 @@ import type {
   IncubatorPlayerPublic,
   IncubatorRunRecord,
 } from "../types";
-import { DEFAULT_ACCESS_ALLOWANCE } from "./config";
-import { createMockPlayers } from "./players.mock";
+import { DEFAULT_ACCESS_ALLOWANCE } from "./config.js";
+import { createMockPlayers } from "./players.mock.js";
 
 export interface IncubatorMemoryStore {
   players: Map<string, IncubatorPlayerPublic>;

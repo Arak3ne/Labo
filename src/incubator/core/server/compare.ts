@@ -2,7 +2,7 @@ import type { IncubatorRevealCode } from "../../types";
 import {
   readSignatureForCompare,
   type BiologicalSignature,
-} from "./signatures";
+} from "./signatures.js";
 
 function isReverseMatch(
   left: BiologicalSignature,

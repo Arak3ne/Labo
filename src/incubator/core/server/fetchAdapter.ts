@@ -1,5 +1,10 @@
-import { IncomingMessage, type IncomingHttpHeaders, type OutgoingHttpHeaders, type ServerResponse } from "node:http";
-import { Socket } from "node:net";
+import type {
+  IncomingHttpHeaders,
+  IncomingMessage,
+  OutgoingHttpHeaders,
+  ServerResponse,
+} from "node:http";
+import { Readable } from "node:stream";
 
 export interface HttpSink {
   setHeader(name: string, value: number | string | readonly string[]): this;
@@ -66,19 +71,45 @@ export function nodeSink(response: ServerResponse): HttpSink {
   };
 }
 
+function methodCarriesBody(method: string): boolean {
+  return method === "POST" || method === "PUT" || method === "PATCH";
+}
+
+export function isFetchRequest(value: unknown): value is Request {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { arrayBuffer?: unknown; headers?: { get?: unknown } };
+  return typeof candidate.arrayBuffer === "function" && typeof candidate.headers?.get === "function";
+}
+
 export async function incomingFromFetch(request: Request): Promise<IncomingMessage> {
   const url = new URL(request.url);
-  const req = new IncomingMessage(new Socket());
-  req.method = request.method;
-  req.url = `${url.pathname}${url.search}`;
+  const method = request.method.toUpperCase();
+  const body = methodCarriesBody(method)
+    ? Buffer.from(await request.arrayBuffer())
+    : Buffer.alloc(0);
+  const chunks = body.length > 0 ? [body] : [];
+  const readable = Readable.from(chunks);
   const headers: IncomingHttpHeaders = {};
   request.headers.forEach((value, key) => {
     headers[key.toLowerCase()] = value;
   });
   if (!headers.host) headers.host = url.host;
-  req.headers = headers;
-  const body = Buffer.from(await request.arrayBuffer());
-  if (body.length > 0) req.push(body);
-  req.push(null);
-  return req;
+  const forwarded = headerValue(headers["x-forwarded-for"]);
+  Object.assign(readable, {
+    method,
+    url: `${url.pathname}${url.search}`,
+    headers,
+    complete: true,
+    socket: {
+      remoteAddress: forwarded ?? "127.0.0.1",
+      destroy() {},
+    },
+  });
+  return readable as IncomingMessage;
+}
+
+function headerValue(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return undefined;
+  return raw.split(",")[0]?.trim() || undefined;
 }

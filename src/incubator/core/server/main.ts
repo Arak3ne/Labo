@@ -1,4 +1,4 @@
-import { createIncubatorNodeServer, loadIncubatorServerConfig } from "./nodeServer";
+import { createIncubatorNodeServer, loadIncubatorServerConfig } from "./nodeServer.js";
 
 const port = Number(process.env.LABO_SERVER_PORT ?? 8787);
 const host = process.env.LABO_SERVER_HOST ?? "127.0.0.1";

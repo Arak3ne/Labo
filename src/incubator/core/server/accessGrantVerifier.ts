@@ -1,9 +1,9 @@
-import type { PlayerCodeHashEntry } from "./playerCodeHashes";
-import { createPlayerCodeVerifier, hashPlayerCode } from "./playerCodeVerifier";
+import type { PlayerCodeHashEntry } from "./playerCodeHashes.js";
+import { createPlayerCodeVerifier, hashPlayerCode } from "./playerCodeVerifier.js";
 import {
   CANONICAL_ACCESS_GRANT_HASHES,
   type AccessGrantHashEntry,
-} from "./accessGrantHashes";
+} from "./accessGrantHashes.js";
 
 export type AccessGrantVerifier = (accessCode: string) => Promise<string | undefined>;
 

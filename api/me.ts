@@ -1,3 +1,5 @@
+import vercelHandler from "../src/incubator/core/server/vercelHandler.js";
+
 export const config = {
   runtime: "nodejs",
   maxDuration: 10,
@@ -5,9 +7,6 @@ export const config = {
 
 async function handle(request: Request): Promise<Response> {
   try {
-    const { default: vercelHandler } = await import(
-      "../src/incubator/core/server/vercelHandler"
-    );
     const result = await vercelHandler(request);
     if (result instanceof Response) return result;
     return new Response(null, { status: 204 });

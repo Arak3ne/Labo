@@ -8,31 +8,31 @@ import type {
   IncubatorRevealCode,
   IncubatorSession,
 } from "../../types";
-import { createMemoryStore, type IncubatorMemoryStore } from "../store";
+import { createMemoryStore, type IncubatorMemoryStore } from "../store.js";
 import {
   FetchSink,
   incomingFromFetch,
   nodeSink,
   type HttpSink,
-} from "./fetchAdapter";
+} from "./fetchAdapter.js";
 import {
   createFileAccessGrantLedger,
   type AccessGrantLedger,
-} from "./accessGrantLedger";
+} from "./accessGrantLedger.js";
 import {
   normalizeAccessCode,
   type AccessGrantVerifier,
   verifyCanonicalAccessGrant,
-} from "./accessGrantVerifier";
+} from "./accessGrantVerifier.js";
 import {
   createFingerprintSessionAuthority,
   type FingerprintSessionAuthority,
-} from "./fingerprintSession";
+} from "./fingerprintSession.js";
 import {
   type PlayerCodeVerifier,
   verifyCanonicalPlayerCode,
-} from "./playerCodeVerifier";
-import { seedBiologicalSignatures } from "./signatures";
+} from "./playerCodeVerifier.js";
+import { seedBiologicalSignatures } from "./signatures.js";
 
 const COOKIE_NAME = "labo_session";
 const CHAMBERS = new Set<IncubatorChamber>(["left", "right"]);
@@ -756,6 +756,7 @@ export function createIncubatorNodeServer(
 
   let httpServer: Server | undefined;
   let webSockets: RealtimeServer | undefined;
+  let maintenance: ReturnType<typeof setInterval> | undefined;
 
   function getHttpServer(): Server {
     if (!httpServer) {
@@ -819,36 +820,39 @@ export function createIncubatorNodeServer(
     );
   }
 
-  const maintenance = setInterval(() => {
-    const timestamp = epoch();
-    for (const [token, session] of sessions) {
-      if (session.expiresAt <= timestamp) sessions.delete(token);
-    }
-    for (const room of rooms.values()) {
-      if (room.expiresAt <= timestamp) {
-        const snapshot = authority.getSnapshot(room.id);
-        if (snapshot?.state === "ANALYZING") continue;
-        authority.cancel(room.id, { actor: "joueur", actorId: room.initiatorId });
-        for (const socket of room.sockets) socket.close(1001, "expired");
-        room.unsubscribe();
-        if (room.resolveTimer) clearTimeout(room.resolveTimer);
-        clearDepartureTimers(room);
-        codes.delete(room.accessCode);
-        rooms.delete(room.id);
+  function startMaintenance(): void {
+    if (maintenance) return;
+    maintenance = setInterval(() => {
+      const timestamp = epoch();
+      for (const [token, session] of sessions) {
+        if (session.expiresAt <= timestamp) sessions.delete(token);
       }
-    }
-    if (!webSockets) return;
-    for (const socket of webSockets.clients) {
-      const tracked = socket as PushSocket & { isAlive?: boolean };
-      if (tracked.isAlive === false) {
-        tracked.terminate();
-        continue;
+      for (const room of rooms.values()) {
+        if (room.expiresAt <= timestamp) {
+          const snapshot = authority.getSnapshot(room.id);
+          if (snapshot?.state === "ANALYZING") continue;
+          authority.cancel(room.id, { actor: "joueur", actorId: room.initiatorId });
+          for (const socket of room.sockets) socket.close(1001, "expired");
+          room.unsubscribe();
+          if (room.resolveTimer) clearTimeout(room.resolveTimer);
+          clearDepartureTimers(room);
+          codes.delete(room.accessCode);
+          rooms.delete(room.id);
+        }
       }
-      tracked.isAlive = false;
-      tracked.ping();
-    }
-  }, heartbeatMs);
-  maintenance.unref?.();
+      if (!webSockets) return;
+      for (const socket of webSockets.clients) {
+        const tracked = socket as PushSocket & { isAlive?: boolean };
+        if (tracked.isAlive === false) {
+          tracked.terminate();
+          continue;
+        }
+        tracked.isAlive = false;
+        tracked.ping();
+      }
+    }, heartbeatMs);
+    maintenance.unref?.();
+  }
 
   return {
     get server() {
@@ -861,10 +865,15 @@ export function createIncubatorNodeServer(
     async dispatchWeb(request: Request): Promise<Response> {
       const incoming = await incomingFromFetch(request);
       const sink = new FetchSink();
-      await handleRequest(incoming, sink);
-      return sink.toResponse();
+      try {
+        await handleRequest(incoming, sink);
+        return sink.toResponse();
+      } finally {
+        incoming.destroy();
+      }
     },
     async listen(port = 0, host = "127.0.0.1") {
+      startMaintenance();
       await attachRealtime();
       const server = getHttpServer();
       return new Promise((resolve, reject) => {
@@ -877,7 +886,7 @@ export function createIncubatorNodeServer(
     },
     close() {
       shuttingDown = true;
-      clearInterval(maintenance);
+      if (maintenance) clearInterval(maintenance);
       for (const room of rooms.values()) {
         room.unsubscribe();
         if (room.resolveTimer) clearTimeout(room.resolveTimer);
