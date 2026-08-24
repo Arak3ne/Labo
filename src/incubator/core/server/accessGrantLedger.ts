@@ -22,6 +22,15 @@ function assertAccessGrantId(accessGrantId: string): void {
   }
 }
 
+function isMissingFileError(error: unknown): boolean {
+  return Boolean(
+    error
+    && typeof error === "object"
+    && "code" in error
+    && error.code === "ENOENT",
+  );
+}
+
 export function createMemoryAccessGrantLedger(
   initialConsumed: readonly string[] = [],
 ): AccessGrantLedger {
@@ -49,14 +58,10 @@ function parseLedger(path: string): Set<string> {
   try {
     parsed = JSON.parse(readFileSync(path, "utf8"));
   } catch (error) {
-    if (
-      error instanceof Error
-      && "code" in error
-      && (error as NodeJS.ErrnoException).code === "ENOENT"
-    ) {
+    if (isMissingFileError(error)) {
       return new Set();
     }
-    throw new Error("invalid_access_ledger", { cause: error });
+    throw new Error("invalid_access_ledger");
   }
   if (
     typeof parsed !== "object"
