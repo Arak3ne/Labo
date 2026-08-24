@@ -52,6 +52,7 @@ const ringBPos = v3(0.82, 1.76, 0.18);
 const lightPos = v3(0.7, 1.9, 1.1);
 const glyphScale = v3(5.35, 1.34, 1);
 const panelScale = v3(6.4, 2.15, 1);
+const ringBScale = v3(1.28, 1.28, 1.28);
 const holoLight = shallowRef<{ intensity: number } | null>(null);
 const reducedMotion = typeof matchMedia === "function"
   && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -185,7 +186,7 @@ onUnmounted(() => {
       :position="ringBPos"
       :material="ring"
       :rotation-x="1.05"
-      :scale="1.28"
+      :scale="ringBScale"
       :render-order="21"
     >
       <TresTorusGeometry :args="[1.85, 0.008, 8, 96]" />
