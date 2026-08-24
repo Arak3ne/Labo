@@ -262,6 +262,10 @@ export function createFingerprintSessionAuthority(
     }
     const open = getOpen(sessionId);
     if (typeof open === "string") {
+      if (open === "session_closed") {
+        const record = sessions.get(sessionId);
+        return record ? success(record) : deny("unknown_session");
+      }
       return deny(open);
     }
     const occupant = open.chambers[chamber];

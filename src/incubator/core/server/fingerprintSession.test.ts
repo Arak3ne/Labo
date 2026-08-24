@@ -205,6 +205,9 @@ describe("fingerprint session authority", () => {
       ok: false,
       reason: "session_closed",
     });
+    expect(authority.release(sessionId, second, "right").ok).toBe(true);
+    expect(authority.disconnect(sessionId, initiator, "left").ok).toBe(true);
+    expect(authority.getSnapshot(sessionId)?.state).toBe("ANALYZING");
     expect(authority.resolve(sessionId).ok).toBe(true);
     expect(authority.resolve(sessionId).ok).toBe(true);
     expect(store.runs).toHaveLength(1);

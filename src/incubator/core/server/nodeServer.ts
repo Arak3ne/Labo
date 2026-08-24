@@ -727,7 +727,12 @@ export function createIncubatorNodeServer(
           ? authority.press(room.id, authenticated, chamber)
           : authority.release(room.id, authenticated, chamber);
         if (!result.ok) {
-          deny(response, 409);
+          const status = result.reason === "unknown_session"
+            ? 404
+            : result.reason === "access_denied"
+              ? 403
+              : 409;
+          sendJson(response, status, { error: "request_denied", reason: result.reason });
           return;
         }
         broadcast(room, method === "POST" ? "chamber.pressed" : "chamber.released");

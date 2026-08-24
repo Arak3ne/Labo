@@ -341,6 +341,34 @@ describe("authoritative incubator Node server", () => {
     expect(ledger.isConsumed("01")).toBe(false);
   });
 
+  it("treats a fingerprint release as a no-op once analysis has locked", async () => {
+    const first = await login("TEST-A1");
+    const second = await login("TEST-A2");
+    const room = await createRoom(first.cookie!);
+    await call("POST", "/api/incubations/join", { accessCode: room.body.accessCode }, second.cookie);
+    await call(
+      "POST",
+      `/api/incubations/${room.body.id}/chambers/left/fingerprint`,
+      undefined,
+      first.cookie,
+    );
+    await call(
+      "POST",
+      `/api/incubations/${room.body.id}/chambers/right/fingerprint`,
+      undefined,
+      second.cookie,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    const released = await call(
+      "DELETE",
+      `/api/incubations/${room.body.id}/chambers/left/fingerprint`,
+      undefined,
+      first.cookie,
+    );
+    expect(released.status).toBe(200);
+    expect(["ANALYZING", "RESOLVED"]).toContain(released.body.status);
+  });
+
   it("allows exactly one concurrent reservation for the same code", async () => {
     const first = await login("TEST-A1");
     const second = await login("TEST-A2");
