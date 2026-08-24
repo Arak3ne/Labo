@@ -53,12 +53,9 @@ describe("Vercel incubator adapter", () => {
 
   it("recovers the public API path after a Vercel rewrite to /api", async () => {
     process.env.VERCEL = "1";
-    const rewritten = new Request("http://localhost/api", {
+    const rewritten = new Request("http://localhost/api?__labo_path=/api/auth/login", {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-forwarded-uri": "/api/auth/login",
-      },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ playerCode: "nope" }),
     });
     const response = await vercelHandler(rewritten);

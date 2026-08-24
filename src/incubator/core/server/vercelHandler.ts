@@ -22,15 +22,17 @@ export function getIncubatorServer(): IncubatorNodeServer {
 
 export function withPublicApiPath(request: Request): Request {
   const url = new URL(request.url);
+  const fromQuery = url.searchParams.get("__labo_path");
   const forwarded = readForwardedApiPath(request);
-  let pathname = forwarded ?? url.pathname;
+  let pathname = (fromQuery?.startsWith("/api") ? fromQuery : undefined) ?? forwarded ?? url.pathname;
+  url.searchParams.delete("__labo_path");
   if (pathname === "/api/index" || pathname === "/api/index.js") {
     pathname = forwarded && forwarded.startsWith("/api/") ? forwarded : "/api";
   }
   if (!pathname.startsWith("/api/") && pathname !== "/api") {
     pathname = pathname.startsWith("/") ? `/api${pathname}` : `/api/${pathname}`;
   }
-  if (pathname === url.pathname) return request;
+  if (pathname === url.pathname && !fromQuery) return request;
   url.pathname = pathname;
   return new Request(url, request);
 }

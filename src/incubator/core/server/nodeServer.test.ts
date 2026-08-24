@@ -139,6 +139,7 @@ describe("authoritative incubator Node server", () => {
     });
     expect(config.production).toBe(true);
     expect(config.accessLedgerPath).toBe("/tmp/incubator-access-ledger.json");
+    expect(config.sessionSecret).toContain(":labo-session");
   });
 
   it("answers GET /api/me as unauthorized over the fetch adapter", async () => {
@@ -192,6 +193,43 @@ describe("authoritative incubator Node server", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("set-cookie")).toContain("labo_session=");
     await isolated.close();
+  });
+
+  it("accepts a signed session issued by another server instance", async () => {
+    const shared = { ...baseConfig, sessionSecret: "shared-secret" };
+    const issuer = createIncubatorNodeServer({
+      config: shared,
+      store: createMemoryStore(1),
+      verifyPlayerCode: async (playerCode) => testCodes.get(playerCode),
+      verifyAccessGrant: async (accessCode) => testAccessGrants.get(accessCode),
+      accessGrantLedger: createMemoryAccessGrantLedger(),
+    });
+    const login = await issuer.dispatchWeb(new Request("http://localhost/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ playerCode: "TEST-A1" }),
+    }));
+    const cookie = login.headers.get("set-cookie")?.split(";")[0];
+    expect(cookie).toMatch(/^labo_session=/);
+    await issuer.close();
+
+    const other = createIncubatorNodeServer({
+      config: shared,
+      store: createMemoryStore(1),
+      verifyPlayerCode: async () => undefined,
+      verifyAccessGrant: async (accessCode) => testAccessGrants.get(accessCode),
+      accessGrantLedger: createMemoryAccessGrantLedger(),
+    });
+    const created = await other.dispatchWeb(new Request("http://localhost/api/incubations", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: cookie!,
+      },
+      body: JSON.stringify({ accessCode: "A1-B2" }),
+    }));
+    expect(created.status).toBe(201);
+    await other.close();
   });
 
   async function login(playerCode: string): Promise<HttpResult> {

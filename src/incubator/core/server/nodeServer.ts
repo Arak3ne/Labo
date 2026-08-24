@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type {
@@ -32,6 +31,10 @@ import {
   type PlayerCodeVerifier,
   verifyCanonicalPlayerCode,
 } from "./playerCodeVerifier.js";
+import {
+  createSessionToken,
+  playerIdFromSessionToken,
+} from "./sessionCookie.js";
 import { seedBiologicalSignatures } from "./signatures.js";
 
 const COOKIE_NAME = "labo_session";
@@ -51,6 +54,7 @@ export interface IncubatorServerConfig {
   jsonLimitBytes?: number;
   heartbeatMs?: number;
   accessLedgerPath?: string;
+  sessionSecret?: string;
 }
 
 export interface CreateIncubatorServerOptions {
@@ -70,11 +74,6 @@ export interface IncubatorNodeServer {
   dispatchWeb(request: Request): Promise<Response>;
   listen(port?: number, host?: string): Promise<AddressInfo>;
   close(): Promise<void>;
-}
-
-interface AuthSession {
-  playerId: string;
-  expiresAt: number;
 }
 
 interface RateBucket {
@@ -187,6 +186,8 @@ export function loadIncubatorServerConfig(
     joinRateLimitMax: numberFrom("LABO_JOIN_RATE_LIMIT_MAX"),
     accessLedgerPath: env.LABO_ACCESS_LEDGER_PATH
       ?? (env.VERCEL ? "/tmp/incubator-access-ledger.json" : undefined),
+    sessionSecret: env.LABO_SESSION_SECRET
+      ?? (env.VERCEL ? `${env.VERCEL_GIT_COMMIT_SHA ?? "vercel"}:labo-session` : "labo-dev-session"),
   };
 }
 
@@ -303,13 +304,13 @@ export function createIncubatorNodeServer(
   const joinLimit = positive(options.config.joinRateLimitMax, 12);
   const jsonLimit = positive(options.config.jsonLimitBytes, 16_384);
   const heartbeatMs = positive(options.config.heartbeatMs, 30_000);
+  const sessionSecret = options.config.sessionSecret ?? "labo-dev-session";
   const verifyPlayerCode = options.verifyPlayerCode ?? verifyCanonicalPlayerCode;
   const verifyAccessGrant = options.verifyAccessGrant ?? verifyCanonicalAccessGrant;
   const accessGrantLedger = options.accessGrantLedger
     ?? createFileAccessGrantLedger(
       options.config.accessLedgerPath ?? ".data/incubator-access-ledger.json",
     );
-  const sessions = new Map<string, AuthSession>();
   const rooms = new Map<string, Room>();
   const codes = new Map<string, string>();
   const grantReservations = new Map<string, string>();
@@ -356,13 +357,9 @@ export function createIncubatorNodeServer(
   function authenticate(request: IncomingMessage): IncubatorSession | undefined {
     const token = parseCookies(request.headers.cookie).get(COOKIE_NAME);
     if (!token) return undefined;
-    const session = sessions.get(token);
-    if (!session || session.expiresAt <= epoch()) {
-      if (session) sessions.delete(token);
-      return undefined;
-    }
-    if (!store.players.has(session.playerId)) return undefined;
-    return { actor: "joueur", actorId: session.playerId };
+    const playerId = playerIdFromSessionToken(token, sessionSecret, epoch());
+    if (!playerId || !store.players.has(playerId)) return undefined;
+    return { actor: "joueur", actorId: playerId };
   }
 
   function roomForParticipant(
@@ -605,22 +602,20 @@ export function createIncubatorNodeServer(
           deny(response, 401);
           return;
         }
-        const token = randomBytes(32).toString("base64url");
-        sessions.set(token, { playerId, expiresAt: epoch() + sessionTtlMs });
+        const expiresAt = epoch() + sessionTtlMs;
+        const token = createSessionToken(playerId, expiresAt, sessionSecret);
         response.setHeader(
           "set-cookie",
-          `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(sessionTtlMs / 1_000)}${options.config.production ? "; Secure" : ""}`,
+          `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(sessionTtlMs / 1_000)}${options.config.production ? "; Secure" : ""}`,
         );
         sendJson(response, 200, personalProjection(store, playerId));
         return;
       }
 
       if (method === "POST" && path === "/api/auth/logout") {
-        const token = parseCookies(request.headers.cookie).get(COOKIE_NAME);
-        if (token) sessions.delete(token);
         response.setHeader(
           "set-cookie",
-          `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${options.config.production ? "; Secure" : ""}`,
+          `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${options.config.production ? "; Secure" : ""}`,
         );
         sendEmpty(response);
         return;
@@ -824,9 +819,6 @@ export function createIncubatorNodeServer(
     if (maintenance) return;
     maintenance = setInterval(() => {
       const timestamp = epoch();
-      for (const [token, session] of sessions) {
-        if (session.expiresAt <= timestamp) sessions.delete(token);
-      }
       for (const room of rooms.values()) {
         if (room.expiresAt <= timestamp) {
           const snapshot = authority.getSnapshot(room.id);
