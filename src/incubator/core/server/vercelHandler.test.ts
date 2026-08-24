@@ -1,20 +1,25 @@
-import type { IncomingMessage } from "node:http";
-import { describe, expect, it } from "vitest";
-import { vercelRequestUrl } from "./vercelHandler";
+import { afterEach, describe, expect, it } from "vitest";
+import vercelHandler from "./vercelHandler";
 
-function req(url: string): IncomingMessage {
-  return { url } as IncomingMessage;
-}
+const globalForLabo = globalThis as typeof globalThis & {
+  __laboIncubatorServer?: { close(): Promise<void> };
+};
+
+const previousVercel = process.env.VERCEL;
+
+afterEach(async () => {
+  const app = globalForLabo.__laboIncubatorServer;
+  globalForLabo.__laboIncubatorServer = undefined;
+  await app?.close();
+  if (previousVercel === undefined) delete process.env.VERCEL;
+  else process.env.VERCEL = previousVercel;
+});
 
 describe("Vercel incubator adapter", () => {
-  it("keeps already-prefixed API paths", () => {
-    expect(vercelRequestUrl(req("/api/me"))).toBe("/api/me");
-    expect(vercelRequestUrl(req("/api/auth/login?x=1"))).toBe("/api/auth/login?x=1");
-  });
-
-  it("prefixes stripped function paths", () => {
-    expect(vercelRequestUrl(req("/me"))).toBe("/api/me");
-    expect(vercelRequestUrl(req("/auth/login"))).toBe("/api/auth/login");
-    expect(vercelRequestUrl(req("/"))).toBe("/api");
+  it("answers GET /api/me as unauthorized", async () => {
+    process.env.VERCEL = "1";
+    const response = await vercelHandler(new Request("http://localhost/api/me"));
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "request_denied" });
   });
 });

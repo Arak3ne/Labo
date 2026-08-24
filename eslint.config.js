@@ -24,6 +24,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist", "node_modules"],
+    ignores: ["dist", "dist-server", "node_modules"],
   },
 );
