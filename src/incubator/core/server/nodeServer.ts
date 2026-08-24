@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { WebSocket, WebSocketServer } from "ws";
 import type {
   IncubatorChamber,
   IncubatorFingerprintSnapshot,
@@ -83,6 +82,42 @@ interface RateBucket {
   resetAt: number;
 }
 
+interface PushSocket {
+  readyState: number;
+  send(data: string): void;
+  close(code?: number, reason?: string): void;
+  terminate(): void;
+  ping(): void;
+  on(event: string, listener: (...args: unknown[]) => void): void;
+}
+
+interface RealtimeServer {
+  clients: Set<PushSocket>;
+  close(callback: () => void): void;
+  handleUpgrade(
+    request: IncomingMessage,
+    socket: import("node:stream").Duplex,
+    head: Buffer,
+    callback: (socket: PushSocket) => void,
+  ): void;
+  on(
+    event: "connection",
+    listener: (
+      socket: PushSocket,
+      request: IncomingMessage,
+      room: Room,
+      authenticated: IncubatorSession,
+    ) => void,
+  ): void;
+  emit(
+    event: "connection",
+    socket: PushSocket,
+    request: IncomingMessage,
+    room: Room,
+    authenticated: IncubatorSession,
+  ): void;
+}
+
 interface Room {
   id: string;
   accessCode: string;
@@ -95,7 +130,7 @@ interface Room {
   expiresAt: number;
   resolveTimer?: ReturnType<typeof setTimeout>;
   unsubscribe: () => void;
-  sockets: Set<WebSocket>;
+  sockets: Set<PushSocket>;
 }
 
 type PublicParticipant = IncubatorPlayerPublic;
@@ -720,7 +755,7 @@ export function createIncubatorNodeServer(
   }
 
   let httpServer: Server | undefined;
-  let webSockets: WebSocketServer | undefined;
+  let webSockets: RealtimeServer | undefined;
 
   function getHttpServer(): Server {
     if (!httpServer) {
@@ -735,7 +770,7 @@ export function createIncubatorNodeServer(
     if (webSockets) return;
     const { WebSocketServer: ServerSocket } = await import("ws");
     const sockets = new ServerSocket({ noServer: true });
-    webSockets = sockets;
+    webSockets = sockets as unknown as RealtimeServer;
     getHttpServer().on("upgrade", (request, socket, head) => {
       const url = new URL(request.url ?? "/", "http://localhost");
       const authenticated = authenticate(request);
@@ -752,7 +787,7 @@ export function createIncubatorNodeServer(
     });
     sockets.on(
       "connection",
-      (socket: WebSocket, _request: IncomingMessage, room: Room, authenticated: IncubatorSession) => {
+      (socket: PushSocket, _request: IncomingMessage, room: Room, authenticated: IncubatorSession) => {
         if (!room.participants.has(authenticated.actorId)) {
           socket.close(1008, "participant_departed");
           return;
@@ -804,7 +839,7 @@ export function createIncubatorNodeServer(
     }
     if (!webSockets) return;
     for (const socket of webSockets.clients) {
-      const tracked = socket as WebSocket & { isAlive?: boolean };
+      const tracked = socket as PushSocket & { isAlive?: boolean };
       if (tracked.isAlive === false) {
         tracked.terminate();
         continue;
@@ -813,7 +848,7 @@ export function createIncubatorNodeServer(
       tracked.ping();
     }
   }, heartbeatMs);
-  maintenance.unref();
+  maintenance.unref?.();
 
   return {
     get server() {
