@@ -133,6 +133,14 @@ describe("authoritative incubator Node server", () => {
     })).not.toThrow();
   });
 
+  it("uses an ephemeral ledger path on Vercel", () => {
+    const config = loadIncubatorServerConfig({
+      VERCEL: "1",
+    });
+    expect(config.production).toBe(true);
+    expect(config.accessLedgerPath).toBe("/tmp/incubator-access-ledger.json");
+  });
+
   async function login(playerCode: string): Promise<HttpResult> {
     return call("POST", "/api/auth/login", { playerCode });
   }

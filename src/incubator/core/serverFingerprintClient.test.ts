@@ -403,6 +403,35 @@ describe("Incubator browser server transport", () => {
     });
   });
 
+  it("keeps HTTP snapshot polling when the websocket cannot stay open", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(room()))
+      .mockResolvedValue(jsonResponse(room({
+        status: "ONE_FINGERPRINT",
+        chambers: { left: { subjectId: "A1", pressed: true } },
+      })));
+    const client = createServerFingerprintClient({
+      fetch: fetchMock,
+      WebSocket: FakeWebSocket,
+      reconnectBaseDelayMs: 100,
+      maxReconnectAttempts: 1,
+      pollIntervalMs: 50,
+    });
+    await client.createSession("A1-B2");
+    const listener = vi.fn();
+    client.subscribe(listener);
+    FakeWebSocket.instances[0]?.serverClose();
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(80);
+
+    expect(client.getSnapshot()?.state).toBe("ONE_FINGERPRINT");
+    expect(client.getSnapshot()?.chambers).toEqual({
+      left: { subjectId: "A1", pressed: true },
+    });
+    client.destroy();
+  });
+
   it.each([
     [401, "unauthorized"],
     [429, "rate_limited"],

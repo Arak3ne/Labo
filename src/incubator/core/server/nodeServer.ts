@@ -61,6 +61,7 @@ export interface CreateIncubatorServerOptions {
 export interface IncubatorNodeServer {
   server: Server;
   store: IncubatorMemoryStore;
+  dispatch(request: IncomingMessage, response: ServerResponse): Promise<void>;
   listen(port?: number, host?: string): Promise<AddressInfo>;
   close(): Promise<void>;
 }
@@ -132,7 +133,7 @@ export function loadIncubatorServerConfig(
   };
 
   return {
-    production: env.NODE_ENV === "production",
+    production: env.NODE_ENV === "production" || env.VERCEL === "1",
     sessionTtlMs: numberFrom("LABO_SESSION_TTL_MS"),
     incubationTtlMs: numberFrom("LABO_INCUBATION_TTL_MS"),
     syncDurationMs: numberFrom("LABO_SYNC_DURATION_MS"),
@@ -142,7 +143,8 @@ export function loadIncubatorServerConfig(
     rateLimitWindowMs: numberFrom("LABO_RATE_LIMIT_WINDOW_MS"),
     loginRateLimitMax: numberFrom("LABO_LOGIN_RATE_LIMIT_MAX"),
     joinRateLimitMax: numberFrom("LABO_JOIN_RATE_LIMIT_MAX"),
-    accessLedgerPath: env.LABO_ACCESS_LEDGER_PATH,
+    accessLedgerPath: env.LABO_ACCESS_LEDGER_PATH
+      ?? (env.VERCEL ? "/tmp/incubator-access-ledger.json" : undefined),
   };
 }
 
@@ -158,8 +160,21 @@ function parseCookies(header: string | undefined): Map<string, string> {
   return cookies;
 }
 
+function headerValue(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return undefined;
+  const first = raw.split(",")[0]?.trim();
+  return first || undefined;
+}
+
+function requestHost(request: IncomingMessage): string | undefined {
+  return headerValue(request.headers["x-forwarded-host"]) ?? request.headers.host;
+}
+
 function requestIp(request: IncomingMessage): string {
-  return request.socket.remoteAddress ?? "unknown";
+  return headerValue(request.headers["x-forwarded-for"])
+    ?? request.socket.remoteAddress
+    ?? "unknown";
 }
 
 function sendJson(response: ServerResponse, status: number, payload: unknown): void {
@@ -508,7 +523,7 @@ export function createIncubatorNodeServer(
   function sameOrigin(request: IncomingMessage): boolean {
     const origin = request.headers.origin;
     if (!origin) return true;
-    const host = request.headers.host;
+    const host = requestHost(request);
     if (!host) return false;
     try {
       return new URL(origin).host === host;
@@ -517,7 +532,10 @@ export function createIncubatorNodeServer(
     }
   }
 
-  const server = createServer(async (request, response) => {
+  async function handleRequest(
+    request: IncomingMessage,
+    response: ServerResponse,
+  ): Promise<void> {
     try {
       const method = request.method ?? "";
       const url = new URL(request.url ?? "/", "http://localhost");
@@ -692,6 +710,10 @@ export function createIncubatorNodeServer(
         sendJson(response, 500, { error: "internal_error" });
       }
     }
+  }
+
+  const server = createServer((request, response) => {
+    void handleRequest(request, response);
   });
 
   const webSockets = new WebSocketServer({ noServer: true });
@@ -776,6 +798,7 @@ export function createIncubatorNodeServer(
   return {
     server,
     store,
+    dispatch: handleRequest,
     listen(port = 0, host = "127.0.0.1") {
       return new Promise((resolve, reject) => {
         server.once("error", reject);

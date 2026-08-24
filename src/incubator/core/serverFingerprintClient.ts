@@ -52,6 +52,7 @@ export interface IncubatorBrowserTransportOptions {
   locationHref?: string;
   maxReconnectAttempts?: number;
   reconnectBaseDelayMs?: number;
+  pollIntervalMs?: number;
 }
 
 export class IncubatorTransportError extends Error {
@@ -279,11 +280,13 @@ export function createServerFingerprintClient(
   );
   const maxReconnectAttempts = options.maxReconnectAttempts ?? 5;
   const reconnectBaseDelayMs = options.reconnectBaseDelayMs ?? 250;
+  const pollIntervalMs = options.pollIntervalMs ?? 400;
   const listeners = new Set<(snapshot: IncubatorRoomSnapshot) => void>();
   const transportListeners = new Set<(event: IncubatorFingerprintTransportEvent) => void>();
   let snapshot: IncubatorRoomSnapshot | undefined;
   let socket: WebSocketPort | undefined;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  let pollTimer: ReturnType<typeof setInterval> | undefined;
   let reconnectAttempts = 0;
   let recoveryGeneration = 0;
   let recoveryHalted = false;
@@ -293,6 +296,11 @@ export function createServerFingerprintClient(
     recoveryGeneration += 1;
     if (reconnectTimer !== undefined) clearTimeout(reconnectTimer);
     reconnectTimer = undefined;
+  }
+
+  function stopHttpLive(): void {
+    if (pollTimer !== undefined) clearInterval(pollTimer);
+    pollTimer = undefined;
   }
 
   function closeSocket(): void {
@@ -329,6 +337,7 @@ export function createServerFingerprintClient(
   function haltRecovery(event: IncubatorFingerprintTransportEvent): void {
     recoveryHalted = true;
     stopRecovery();
+    stopHttpLive();
     closeSocket();
     notifyTransport(event);
   }
@@ -344,6 +353,10 @@ export function createServerFingerprintClient(
       || !visible()
     ) return;
     if (reconnectAttempts >= maxReconnectAttempts) {
+      if (action === "connect" && snapshot?.id === roomId && !TERMINAL_STATES.has(snapshot.state)) {
+        startHttpLive(roomId);
+        return;
+      }
       haltRecovery({ type: "connection_interrupted", reason: "network_error" });
       return;
     }
@@ -410,8 +423,10 @@ export function createServerFingerprintClient(
     notify(next);
     if (TERMINAL_STATES.has(next.state)) {
       stopRecovery();
+      stopHttpLive();
       return;
     }
+    startHttpLive(roomId);
     scheduleRecovery(roomId, "connect");
   }
 
@@ -422,24 +437,97 @@ export function createServerFingerprintClient(
     void probeRoom(roomId, generation);
   }
 
+  function startHttpLive(roomId: string): void {
+    if (
+      destroyed
+      || recoveryHalted
+      || pollTimer !== undefined
+      || pollIntervalMs <= 0
+      || listeners.size === 0
+      || snapshot?.id !== roomId
+      || TERMINAL_STATES.has(snapshot.state)
+      || !visible()
+    ) return;
+    const generation = recoveryGeneration;
+    pollTimer = setInterval(() => {
+      void pollRoom(roomId, generation);
+    }, pollIntervalMs);
+  }
+
+  async function pollRoom(roomId: string, generation: number): Promise<void> {
+    if (
+      destroyed
+      || recoveryHalted
+      || generation !== recoveryGeneration
+      || listeners.size === 0
+      || snapshot?.id !== roomId
+      || TERMINAL_STATES.has(snapshot.state)
+      || !visible()
+    ) {
+      stopHttpLive();
+      return;
+    }
+    let response: Response;
+    try {
+      response = await request(
+        fetcher,
+        `/api/incubations/${encodeURIComponent(roomId)}`,
+        { method: "GET" },
+      );
+    } catch {
+      return;
+    }
+    if (
+      destroyed
+      || recoveryHalted
+      || generation !== recoveryGeneration
+      || snapshot?.id !== roomId
+    ) return;
+    if (!response.ok) {
+      const reason = await denialReasonFromProbe(response);
+      if (reason) {
+        haltRecovery({ type: "session_unavailable", reason });
+      }
+      return;
+    }
+    try {
+      const next = mapRoomSnapshot(await readPayload(response));
+      if (next.id !== roomId) return;
+      notify(next);
+      if (TERMINAL_STATES.has(next.state)) {
+        stopRecovery();
+        stopHttpLive();
+        closeSocket();
+      }
+    } catch {
+      // Keep the last validated snapshot until the next poll.
+    }
+  }
+
   function connectSocket(): void {
     if (
       destroyed
       || socket
       || recoveryHalted
-      || !WebSocketImpl
       || listeners.size === 0
       || !snapshot
       || TERMINAL_STATES.has(snapshot.state)
       || !visible()
     ) return;
+    if (!WebSocketImpl) {
+      startHttpLive(snapshot.id);
+      return;
+    }
     const url = new URL("/ws", locationHref);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
     url.searchParams.set("incubationId", snapshot.id);
     const current = new WebSocketImpl(url) as WebSocketPort;
     socket = current;
     current.onopen = () => {
-      if (socket === current) reconnectAttempts = 0;
+      if (socket === current) {
+        reconnectAttempts = 0;
+        stopHttpLive();
+      }
     };
     current.onmessage = (event) => {
       if (socket !== current || typeof event.data !== "string") return;
@@ -455,6 +543,7 @@ export function createServerFingerprintClient(
         notify(next);
         if (TERMINAL_STATES.has(next.state)) {
           stopRecovery();
+          stopHttpLive();
           closeSocket();
         }
       } catch {
@@ -474,6 +563,7 @@ export function createServerFingerprintClient(
     const changedRoom = snapshot?.id !== next.id;
     if (changedRoom) {
       stopRecovery();
+      stopHttpLive();
       closeSocket();
       reconnectAttempts = 0;
     }
@@ -518,8 +608,10 @@ export function createServerFingerprintClient(
   function handleVisibility(): void {
     if (visible()) {
       connectSocket();
+      if (snapshot && !TERMINAL_STATES.has(snapshot.state)) startHttpLive(snapshot.id);
     } else {
       stopRecovery();
+      stopHttpLive();
       closeSocket();
     }
   }
@@ -560,6 +652,7 @@ export function createServerFingerprintClient(
         listeners.delete(listener);
         if (listeners.size === 0) {
           stopRecovery();
+          stopHttpLive();
           closeSocket();
           reconnectAttempts = 0;
         }
@@ -591,6 +684,7 @@ export function createServerFingerprintClient(
       listeners.clear();
       transportListeners.clear();
       stopRecovery();
+      stopHttpLive();
       closeSocket();
       visibility?.removeEventListener("visibilitychange", handleVisibility);
     },
