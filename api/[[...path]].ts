@@ -1,10 +1,6 @@
-import vercelHandler from "../src/incubator/core/server/vercelHandler";
-
 export const config = {
+  runtime: "nodejs",
   maxDuration: 10,
-  api: {
-    bodyParser: false,
-  },
 };
 
-export default vercelHandler;
+export { default } from "../src/incubator/core/server/vercelHandler";

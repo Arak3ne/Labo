@@ -141,6 +141,19 @@ describe("authoritative incubator Node server", () => {
     expect(config.accessLedgerPath).toBe("/tmp/incubator-access-ledger.json");
   });
 
+  it("answers GET /api/me as unauthorized over the fetch adapter", async () => {
+    const isolated = createIncubatorNodeServer({
+      config: baseConfig,
+      store: createMemoryStore(1),
+      verifyPlayerCode: async () => undefined,
+      accessGrantLedger: createMemoryAccessGrantLedger(),
+    });
+    const response = await isolated.dispatchWeb(new Request("http://localhost/api/me"));
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "request_denied" });
+    await isolated.close();
+  });
+
   async function login(playerCode: string): Promise<HttpResult> {
     return call("POST", "/api/auth/login", { playerCode });
   }

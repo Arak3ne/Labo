@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { WebSocket, WebSocketServer } from "ws";
+import type { WebSocket, WebSocketServer } from "ws";
 import type {
   IncubatorChamber,
   IncubatorFingerprintSnapshot,
@@ -10,6 +10,12 @@ import type {
   IncubatorSession,
 } from "../../types";
 import { createMemoryStore, type IncubatorMemoryStore } from "../store";
+import {
+  FetchSink,
+  incomingFromFetch,
+  nodeSink,
+  type HttpSink,
+} from "./fetchAdapter";
 import {
   createFileAccessGrantLedger,
   type AccessGrantLedger,
@@ -62,6 +68,7 @@ export interface IncubatorNodeServer {
   server: Server;
   store: IncubatorMemoryStore;
   dispatch(request: IncomingMessage, response: ServerResponse): Promise<void>;
+  dispatchWeb(request: Request): Promise<Response>;
   listen(port?: number, host?: string): Promise<AddressInfo>;
   close(): Promise<void>;
 }
@@ -177,7 +184,7 @@ function requestIp(request: IncomingMessage): string {
     ?? "unknown";
 }
 
-function sendJson(response: ServerResponse, status: number, payload: unknown): void {
+function sendJson(response: HttpSink, status: number, payload: unknown): void {
   const body = JSON.stringify(payload);
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -188,7 +195,7 @@ function sendJson(response: ServerResponse, status: number, payload: unknown): v
   response.end(body);
 }
 
-function sendEmpty(response: ServerResponse, status = 204): void {
+function sendEmpty(response: HttpSink, status = 204): void {
   response.writeHead(status, { "cache-control": "no-store" });
   response.end();
 }
@@ -383,7 +390,7 @@ export function createIncubatorNodeServer(
       snapshot: project(room),
     });
     for (const socket of room.sockets) {
-      if (socket.readyState === WebSocket.OPEN) socket.send(message);
+      if (socket.readyState === 1) socket.send(message);
     }
   }
 
@@ -516,7 +523,7 @@ export function createIncubatorNodeServer(
     return room;
   }
 
-  function deny(response: ServerResponse, status = 403): void {
+  function deny(response: HttpSink, status = 403): void {
     sendJson(response, status, { error: "request_denied" });
   }
 
@@ -534,7 +541,7 @@ export function createIncubatorNodeServer(
 
   async function handleRequest(
     request: IncomingMessage,
-    response: ServerResponse,
+    response: HttpSink,
   ): Promise<void> {
     try {
       const method = request.method ?? "";
@@ -712,58 +719,70 @@ export function createIncubatorNodeServer(
     }
   }
 
-  const server = createServer((request, response) => {
-    void handleRequest(request, response);
-  });
+  let httpServer: Server | undefined;
+  let webSockets: WebSocketServer | undefined;
 
-  const webSockets = new WebSocketServer({ noServer: true });
-  server.on("upgrade", (request, socket, head) => {
-    const url = new URL(request.url ?? "/", "http://localhost");
-    const authenticated = authenticate(request);
-    const roomId = url.searchParams.get("incubationId");
-    const room = authenticated && roomId ? roomForParticipant(roomId, authenticated) : undefined;
-    if (url.pathname !== "/ws" || !sameOrigin(request) || !authenticated || !room) {
-      socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
-      socket.destroy();
-      return;
+  function getHttpServer(): Server {
+    if (!httpServer) {
+      httpServer = createServer((request, response) => {
+        void handleRequest(request, nodeSink(response));
+      });
     }
-    webSockets.handleUpgrade(request, socket, head, (webSocket) => {
-      webSockets.emit("connection", webSocket, request, room, authenticated);
-    });
-  });
+    return httpServer;
+  }
 
-  webSockets.on(
-    "connection",
-    (socket: WebSocket, _request: IncomingMessage, room: Room, authenticated: IncubatorSession) => {
-      if (!room.participants.has(authenticated.actorId)) {
-        socket.close(1008, "participant_departed");
+  async function attachRealtime(): Promise<void> {
+    if (webSockets) return;
+    const { WebSocketServer: ServerSocket } = await import("ws");
+    const sockets = new ServerSocket({ noServer: true });
+    webSockets = sockets;
+    getHttpServer().on("upgrade", (request, socket, head) => {
+      const url = new URL(request.url ?? "/", "http://localhost");
+      const authenticated = authenticate(request);
+      const roomId = url.searchParams.get("incubationId");
+      const room = authenticated && roomId ? roomForParticipant(roomId, authenticated) : undefined;
+      if (url.pathname !== "/ws" || !sameOrigin(request) || !authenticated || !room) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+        socket.destroy();
         return;
       }
-      room.sockets.add(socket);
-      room.connected.set(
-        authenticated.actorId,
-        (room.connected.get(authenticated.actorId) ?? 0) + 1,
-      );
-      restoreFingerprintAfterReconnect(room, authenticated);
-      socket.send(JSON.stringify({
-        type: "incubation.snapshot",
-        event: "snapshot",
-        snapshot: project(room),
-      }));
-      socket.on("message", () => socket.close(1008, "push_only"));
-      socket.on("pong", () => {
-        Object.assign(socket, { isAlive: true });
+      sockets.handleUpgrade(request, socket, head, (webSocket) => {
+        sockets.emit("connection", webSocket, request, room, authenticated);
       });
-      socket.on("close", () => {
-        room.sockets.delete(socket);
-        const remaining = Math.max(0, (room.connected.get(authenticated.actorId) ?? 1) - 1);
-        room.connected.set(authenticated.actorId, remaining);
-        if (remaining === 0) {
-          scheduleParticipantDeparture(room, authenticated);
+    });
+    sockets.on(
+      "connection",
+      (socket: WebSocket, _request: IncomingMessage, room: Room, authenticated: IncubatorSession) => {
+        if (!room.participants.has(authenticated.actorId)) {
+          socket.close(1008, "participant_departed");
+          return;
         }
-      });
-    },
-  );
+        room.sockets.add(socket);
+        room.connected.set(
+          authenticated.actorId,
+          (room.connected.get(authenticated.actorId) ?? 0) + 1,
+        );
+        restoreFingerprintAfterReconnect(room, authenticated);
+        socket.send(JSON.stringify({
+          type: "incubation.snapshot",
+          event: "snapshot",
+          snapshot: project(room),
+        }));
+        socket.on("message", () => socket.close(1008, "push_only"));
+        socket.on("pong", () => {
+          Object.assign(socket, { isAlive: true });
+        });
+        socket.on("close", () => {
+          room.sockets.delete(socket);
+          const remaining = Math.max(0, (room.connected.get(authenticated.actorId) ?? 1) - 1);
+          room.connected.set(authenticated.actorId, remaining);
+          if (remaining === 0) {
+            scheduleParticipantDeparture(room, authenticated);
+          }
+        });
+      },
+    );
+  }
 
   const maintenance = setInterval(() => {
     const timestamp = epoch();
@@ -783,6 +802,7 @@ export function createIncubatorNodeServer(
         rooms.delete(room.id);
       }
     }
+    if (!webSockets) return;
     for (const socket of webSockets.clients) {
       const tracked = socket as WebSocket & { isAlive?: boolean };
       if (tracked.isAlive === false) {
@@ -796,10 +816,22 @@ export function createIncubatorNodeServer(
   maintenance.unref();
 
   return {
-    server,
+    get server() {
+      return getHttpServer();
+    },
     store,
-    dispatch: handleRequest,
-    listen(port = 0, host = "127.0.0.1") {
+    dispatch(request, response) {
+      return handleRequest(request, nodeSink(response));
+    },
+    async dispatchWeb(request: Request): Promise<Response> {
+      const incoming = await incomingFromFetch(request);
+      const sink = new FetchSink();
+      await handleRequest(incoming, sink);
+      return sink.toResponse();
+    },
+    async listen(port = 0, host = "127.0.0.1") {
+      await attachRealtime();
+      const server = getHttpServer();
       return new Promise((resolve, reject) => {
         server.once("error", reject);
         server.listen(port, host, () => {
@@ -817,11 +849,20 @@ export function createIncubatorNodeServer(
         clearDepartureTimers(room);
         releaseReservation(room);
       }
-      for (const socket of webSockets.clients) socket.terminate();
+      for (const socket of webSockets?.clients ?? []) socket.terminate();
       return new Promise((resolve, reject) => {
-        webSockets.close(() => {
-          server.close((error) => error ? reject(error) : resolve());
-        });
+        const finish = () => {
+          if (!httpServer) {
+            resolve();
+            return;
+          }
+          httpServer.close((error) => error ? reject(error) : resolve());
+        };
+        if (!webSockets) {
+          finish();
+          return;
+        }
+        webSockets.close(finish);
       });
     },
   };
