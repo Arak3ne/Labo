@@ -1,0 +1,20 @@
+---
+description: Produit, architecture et stack du Laboratoire des Morues
+alwaysApply: true
+---
+
+# Labo — Laboratoire des Morues
+
+Produit : expérience sociale/compétitive pour 16 joueurs sur plusieurs semaines (épreuves, éliminations, crédits, alliances, infos secrètes, ADN cachés, Incubateur, Protocole final).
+
+Univers : laboratoire expérimental futuriste, sombre, mystérieux, premium. L’UI doit sembler un système du Laboratoire, pas un site web classique.
+
+Incubateur : deux cobayes, comparaison secrète des signatures biologiques, sortie uniquement `0` | `1` | `M`. ADN secret jamais stocké ni calculé côté client.
+
+Mise en scène Incubateur : 3D spectaculaire (machine, caméra, scans, particules, lumière, hologrammes, cinématique, sound design). Ne pas implémenter le métier ni la machine finale hors scope demandé.
+
+Architecture à respecter : `src/incubator/{core,ui,scene,audio,types}`. Contrats dans `src/incubator/types`. Spec produit : `docs/LABORATOIRE.md`.
+
+Stack figée : Vue 3, TypeScript, Vite, Three.js, TresJS, `@tresjs/cientos`, `@tresjs/post-processing`, GLSL via `vite-plugin-glsl`, GSAP, Howler, GLB/glTF, Rive (`@rive-app/canvas`) seulement si utile. ESLint existant.
+
+Ne pas réinstaller ni remplacer la stack sans nécessité. Ne pas refactorer hors périmètre. Ne pas inventer de règle métier non écrite.

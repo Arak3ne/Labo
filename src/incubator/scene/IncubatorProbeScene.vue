@@ -14,7 +14,7 @@ const lightPosition = new Vector3(4, 6, 2);
     style="width: 100%; height: 70vh"
   >
     <TresCanvas
-      clear-color="#0b0f0c"
+      clear-color="#011210"
       :window-size="false"
     >
       <TresPerspectiveCamera :position="cameraPosition" />

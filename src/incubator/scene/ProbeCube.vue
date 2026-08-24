@@ -19,8 +19,8 @@ onBeforeRender(({ delta }) => {
   <TresMesh ref="cube">
     <TresBoxGeometry :args="[1, 1, 1]" />
     <TresMeshStandardMaterial
-      color="#4ade80"
-      :emissive="0x14532d"
+      color="#087D49"
+      :emissive="0x05603C"
       :emissive-intensity="0.35"
     />
   </TresMesh>

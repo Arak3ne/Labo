@@ -1,0 +1,89 @@
+{
+  "asset": "public/incubator/audio/incubator-sprite.wav",
+  "source": "Original procedural synthesis",
+  "sourceFile": "src/incubator/audio/work/generate-audio.mjs",
+  "author": "Laboratoire des Morues",
+  "license": "Project-owned original asset; no third-party material",
+  "licenseProof": "The deterministic source recipe is stored in this repository and uses only mathematical oscillators and seeded noise.",
+  "externalResearch": [
+    {
+      "source": "Mixkit Sound Effects",
+      "url": "https://mixkit.co/free-sound-effects/",
+      "licenseUrl": "https://mixkit.co/terms/",
+      "decision": "Not incorporated: original synthesis gives stronger per-cue provenance and exact timeline control."
+    },
+    {
+      "source": "Pixabay Sound Effects",
+      "url": "https://pixabay.com/sound-effects/",
+      "licenseUrl": "https://pixabay.com/service/license-summary/",
+      "decision": "Not incorporated: no individual external item was needed."
+    }
+  ],
+  "processing": {
+    "sampleRate": 44100,
+    "channels": 1,
+    "bitDepth": 16,
+    "format": "PCM WAV audio sprite",
+    "peak": "-3 dBFS",
+    "operations": [
+      "deterministic seeded synthesis",
+      "three-layer mechanical, pneumatic and electrical construction",
+      "damped low-frequency resonators",
+      "controlled noise textures",
+      "transient shaping without hard limiting",
+      "click-free envelopes",
+      "seamless periodic idle and analysis loops",
+      "global peak normalization with summing headroom"
+    ]
+  },
+  "cues": {
+    "idle": "Very restrained deep electrical machine-room hum; seamless eight-second loop.",
+    "focusLeft": "Dry low electrical contact impact, with no beep or melodic locator.",
+    "focusRight": "Mirrored dry electrical contact impact, differentiated only by restrained cabinet resonance.",
+    "loadSubjects": "Heavy motor travel, commutated servo, rail friction, end-stop mass and pneumatic pressure release.",
+    "chamberLock": "Low servo pre-roll, multi-resonant steel bolt impact and compressed-air discharge.",
+    "scan": "Narrow electromagnetic friction, controlled current texture and low carriage vibration; no laser chirp.",
+    "startAnalysis": "Breaker engagement, deep power intake and cabinet vibration.",
+    "analysisLoop": "Seamless deep generator hum, mechanical vibration and restrained commutator rhythm, accelerated by runtime playback rate.",
+    "blackout": "Very short breaker trip and low energy collapse, followed by deliberate silence until reveal.",
+    "reveal0": "Cold administrative matte impact and brief pressure discharge.",
+    "reveal1": "Precise low impact, controlled electrical response and restrained relay return.",
+    "revealM": "Deep sub impact and full-machine mechanical/pressure response without rise, melody or victory gesture.",
+    "reset": "Motor rundown, pneumatic vent and heavy low landing before idle resumes."
+  },
+  "introSequences": {
+    "introBoot": "Reuses the idle machine-room hum at reduced level and playback rate for a restrained low initialization bed.",
+    "introIdentify": "Reuses the dry focus-left electrical contact at reduced level for a short matte institutional acknowledgement.",
+    "introEnter": "Layers the existing heavy motor travel with a restrained power-intake cue, then crossfades into the normal idle bed.",
+    "assetDecision": "No sprite regeneration: the existing project-owned layers cover the requested palette without adding redundant material."
+  },
+  "fingerprintSequences": {
+    "fingerprintFocus": "Reuses the matching focusLeft/focusRight matte contact at 0.09 runtime gain for an almost silent acknowledgement.",
+    "fingerprintPress": "Reuses the seamless analysisLoop at 0.075 gain; left runs at 0.74x and right at 0.79x so concurrent chambers remain distinct without excessive summing.",
+    "fingerprintRelease": "Fades only the released chamber loop over 70 ms, then stops its Howler voice to avoid ticks and stale instances.",
+    "fingerprintSync": "Replaces held voices with one shared analysisLoop voice. Over 1.8 seconds it rises from 0.88x/0.10 gain to 1.20x/0.23 gain; release cancels the ramp and restores idle.",
+    "fingerprintConfirmed": "Reuses chamberLock as the single matte mechanical confirmation. The immediately following startAnalysis handoff suppresses its startAnalysis and chamberLock transients, then retains scan, analysis-loop acceleration and blackout.",
+    "cancellation": "Reset, destroy and document visibility loss clear held voices, the shared sync voice and all scheduled ramp steps.",
+    "assetDecision": "No sprite regeneration: focus contacts, the seamless analysis loop and chamber lock already provide the required mature clinical-industrial palette."
+  },
+  "accessTerminalSequences": {
+    "accessTerminalFocus": "Reuses the matte focus-left contact at 0.045 runtime gain for a nearly silent terminal presence cue.",
+    "accessScanStart": "Reuses the seamless analysis loop at 0.68x playback rate and 0.085 gain, with a 120 ms fade-in, for a low clinical scanner hold.",
+    "accessScanCancel": "Fades and stops only the terminal scanner voice over 120 ms, avoiding clicks without touching later chamber fingerprint holds.",
+    "accessGranted": "Fades the scanner, layers the existing heavy chamber lock at 0.38 gain with a short power-intake response at 0.20 gain and 0.9x rate after 210 ms, then ensures the restrained idle bed after 920 ms. No chime or arcade validation gesture.",
+    "lifecycle": "Terminal focus, scanner and granted calls are idempotent within their state. Reset, destroy and document visibility loss clear the scanner voice and all terminal-only timers.",
+    "assetDecision": "No sprite regeneration: the existing project-owned contact, seamless generator, mechanical lock and power-intake layers cover the terminal palette without new assets or licence obligations."
+  },
+  "timeline": {
+    "source": "src/incubator/scene/PlaygroundRig.vue",
+    "startAnalysisMs": {
+      "lock": 180,
+      "scan": 950,
+      "transfer": 2200,
+      "acceleration": 3600,
+      "powerStages": [4400, 5400, 6400, 7250],
+      "blackout": 7550,
+      "revealHold": 8200
+    }
+  }
+}
