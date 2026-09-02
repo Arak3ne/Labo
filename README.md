@@ -7,7 +7,11 @@ npm install
 npm run dev
 ```
 
-Route Incubateur : `/incubateur`
+Routes :
+
+- Accueil `/` → `/terminal/D-07/evaluation`
+- Incubateur : `/incubateur`
+- Prologue : `/terminal/D-07/evaluation`, `/terminal/D-14` (placeholder)
 
 `npm run dev` démarre le serveur autoritaire et Vite.
 

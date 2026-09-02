@@ -31,14 +31,18 @@ Spectaculaire : 3D temps réel, machine futuriste, caméra, scans, particules, l
 
 ## Architecture client
 
-Respecter les modules existants. Ne pas réinstaller ni remplacer la stack sans nécessité.
+Une seule SPA / un seul build. Deux expériences isolées. Respecter les modules existants. Ne pas réinstaller ni remplacer la stack sans nécessité.
 
 | Module | Rôle |
 |---|---|
-| `src/incubator/core` | métier, API, data — aucun secret ADN |
-| `src/incubator/ui` | écrans Vue, sélection, états |
+| `src/router` | composition des routes des deux expériences |
+| `src/incubator/core` | métier Incubateur, API, data — aucun secret ADN |
+| `src/incubator/ui` | écrans Vue Incubateur, sélection, états |
 | `src/incubator/scene` | TresJS / Three.js, FX, caméra |
 | `src/incubator/audio` | Howler |
-| `src/incubator/types` | contrats partagés |
+| `src/incubator/types` | contrats Incubateur |
+| `src/prologue` | expérience Prologue (indépendante de l’Incubateur) |
 
-Contrat scène déjà défini : `idle`, `focusLeft`, `focusRight`, `loadSubjects`, `startAnalysis`, `revealResult('0' \| '1' \| 'M')`, `reset`.
+Ne pas mélanger le code des deux expériences. Ne factoriser un module partagé que lorsqu’il est réellement utilisé par les deux.
+
+Contrat scène Incubateur déjà défini : `idle`, `focusLeft`, `focusRight`, `loadSubjects`, `startAnalysis`, `revealResult('0' \| '1' \| 'M')`, `reset`.

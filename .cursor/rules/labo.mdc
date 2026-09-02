@@ -13,7 +13,9 @@ Incubateur : deux cobayes, comparaison secrète des signatures biologiques, sort
 
 Mise en scène Incubateur : 3D spectaculaire (machine, caméra, scans, particules, lumière, hologrammes, cinématique, sound design). Ne pas implémenter le métier ni la machine finale hors scope demandé.
 
-Architecture à respecter : `src/incubator/{core,ui,scene,audio,types}`. Contrats dans `src/incubator/types`. Spec produit : `docs/LABORATOIRE.md`.
+Architecture : une SPA, deux expériences isolées. Incubateur : `src/incubator/{core,ui,scene,audio,types}` (contrats dans `src/incubator/types`). Prologue : `src/prologue`. Composition des routes dans `src/router`. Ne pas mélanger le code des deux expériences. Ne déplacer dans un module partagé que ce qui est réellement utilisé par les deux. Spec produit : `docs/LABORATOIRE.md`.
+
+Subagents Prologue (`.cursor/agents/`) : `prologue-art-director`, `prologue-ui-engineer`, `prologue-motion`, `prologue-visual-qa`. Workflow par écran ou séquence : art director → validation Product Owner → UI engineer → motion si besoin → visual QA. Code Prologue uniquement dans `src/prologue`. Ne pas modifier l’Incubateur.
 
 Stack figée : Vue 3, TypeScript, Vite, Three.js, TresJS, `@tresjs/cientos`, `@tresjs/post-processing`, GLSL via `vite-plugin-glsl`, GSAP, Howler, GLB/glTF, Rive (`@rive-app/canvas`) seulement si utile. ESLint existant.
 
