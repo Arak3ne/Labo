@@ -6,7 +6,7 @@
  *   1  2  3                       0  1  2
  *   4  5  6                       3  4  5
  *   7  8  9                       6  7  8
- * Séquence : 2 → 7 → 6 → 1 → 8 → 3 → 5
+ * Séquence : 5 → 2 → 7 → 3 → 1 → 4 → 9 → 6
  * Pour changer le schéma, modifier uniquement `D14_PATTERN`.
  *
  * DEV (`import.meta.env.DEV` uniquement) — query string :
@@ -15,7 +15,7 @@
  * En production ces paramètres sont ignorés.
  */
 
-export const D14_PATTERN: number[] = [1, 6, 5, 0, 7, 2, 4];
+export const D14_PATTERN: number[] = [4, 1, 6, 2, 0, 3, 8, 5];
 
 export const DELAY_BEFORE_DETECTION_MS = 180;
 

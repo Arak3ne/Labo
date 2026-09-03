@@ -47,7 +47,7 @@ describe("D-14 machine", () => {
     expect(machine.phase.value).toBe("locked");
     expect(machine.lockStatus.value).toBe("idle");
 
-    const accepted = machine.submitPattern([1, 6, 5, 0, 7, 2, 4]);
+    const accepted = machine.submitPattern([4, 1, 6, 2, 0, 3, 8, 5]);
     expect(accepted).toBe(true);
     expect(machine.lockStatus.value).toBe("ok");
 
@@ -108,7 +108,7 @@ describe("D-14 machine", () => {
     vi.advanceTimersByTime(LOCK_FAIL_HOLD_MS);
     expect(machine.lockStatus.value).toBe("cooldown");
     expect(machine.lockoutRemainingMs.value).toBe(LOCK_COOLDOWN_MS);
-    expect(machine.submitPattern([1, 6, 5, 0, 7, 2, 4])).toBe(false);
+    expect(machine.submitPattern([4, 1, 6, 2, 0, 3, 8, 5])).toBe(false);
 
     vi.advanceTimersByTime(LOCK_COOLDOWN_MS);
     expect(machine.lockStatus.value).toBe("idle");
