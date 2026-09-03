@@ -15,6 +15,7 @@ const subjectId = getOrCreateSubjectId();
 const phase = ref<Phase>("intro");
 const questionIndex = ref(0);
 const selected = ref<ChoiceId | null>(null);
+const answers = ref<{ questionId: number; choiceId: ChoiceId }[]>([]);
 const locked = ref(false);
 const ctaBusy = ref(false);
 const ctaArmed = ref(false);
@@ -58,6 +59,11 @@ function selectChoice(id: ChoiceId, index: number, fromPointer: boolean) {
   selected.value = id;
   focusIndex.value = index;
   locked.value = true;
+  
+  if (question.value) {
+    answers.value.push({ questionId: question.value.id, choiceId: id });
+  }
+
   window.clearTimeout(holdTimer);
   holdTimer = window.setTimeout(advance, HOLD_MS);
 }
@@ -70,6 +76,7 @@ function advance() {
   if (questionIndex.value >= TOTAL - 1) {
     columnMotion.value = "close";
     phase.value = "complete";
+    submitAnswers();
     return;
   }
   columnMotion.value = "swap";
@@ -77,6 +84,24 @@ function advance() {
   selected.value = null;
   locked.value = false;
   focusIndex.value = 0;
+}
+
+async function submitAnswers() {
+  try {
+    await fetch("/d07-submit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        subjectId: subjectId,
+        answers: answers.value,
+        timestamp: new Date().toISOString(),
+      }),
+    });
+  } catch (e) {
+    console.error("Failed to submit answers", e);
+  }
 }
 
 function onChoiceKeydown(event: KeyboardEvent) {

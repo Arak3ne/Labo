@@ -11,7 +11,7 @@ Routes :
 
 - Accueil `/` → `/terminal/D-07/evaluation`
 - Incubateur : `/incubateur`
-- Prologue : `/terminal/D-07/evaluation`, `/terminal/D-14` (placeholder)
+- Prologue : `/terminal/D-07/evaluation`, `/terminal/D-14`
 
 `npm run dev` démarre le serveur autoritaire et Vite.
 

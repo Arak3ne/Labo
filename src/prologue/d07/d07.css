@@ -521,10 +521,10 @@
   gap: 8px;
   margin: 0;
   color: var(--d07-text-muted);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 400;
   letter-spacing: 0.22em;
-  line-height: 1.2;
+  line-height: 1.4;
   cursor: default;
   user-select: text;
 }
@@ -532,10 +532,10 @@
 .d07-log p {
   margin: 0;
   color: var(--d07-text-muted);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 400;
   letter-spacing: 0.22em;
-  line-height: 1.2;
+  line-height: 1.4;
   cursor: default;
 }
 

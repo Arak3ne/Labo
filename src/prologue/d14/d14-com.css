@@ -1,0 +1,139 @@
+/* ---------- BLOC COMMUNICATION ---------- */
+
+.d14-com {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 32px;
+}
+
+.d14-com__sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--d14-active); 
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.d14-com__sub::before {
+  content: "[!]";
+  color: var(--d14-dim);
+}
+
+.d14-com__payload {
+  position: relative;
+  align-self: flex-start;
+  width: 100%;
+  max-width: 52ch;
+  padding: 16px 20px;
+  background: var(--d14-dead);
+  border: 1px solid var(--d14-line);
+  border-left: 2px solid var(--d14-active-deep);
+  color: var(--d14-text);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.d14-com__payload::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -2px;
+  width: 6px;
+  height: 6px;
+  background: var(--d14-active);
+}
+
+.d14-com__payload p {
+  margin: 0;
+}
+
+.d14-com__status {
+  align-self: flex-start;
+  margin: 12px 0 0;
+  color: var(--d14-dim);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.d14-com__status::before {
+  content: ">_ ";
+}
+
+/* ---------- RESSOURCE EXTERNE ---------- */
+
+.d14-res {
+  display: flex;
+  flex-direction: column;
+  margin-top: 16px;
+}
+
+.d14-dump__row--input {
+  cursor: text;
+  align-items: center;
+}
+
+.d14-res__input-group {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  background: var(--d14-dead);
+  border: 1px solid var(--d14-line-strong);
+  padding: 6px 10px;
+  transition: border-color 120ms linear;
+}
+
+.d14-res__input-group:focus-within {
+  border-color: var(--d14-active);
+}
+
+.d14-res__input-group--error,
+.d14-res__input-group--error:focus-within {
+  border-color: var(--d14-active) !important;
+}
+
+.d14-res__input {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: var(--d14-text);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  outline: none;
+}
+
+.d14-res__suffix {
+  flex: 0 0 auto;
+  color: var(--d14-dim);
+  pointer-events: none;
+}
+
+.d14-res__input::placeholder {
+  color: var(--d14-line-strong);
+}
+
+.d14-res__input--error {
+  color: var(--d14-active) !important;
+}
+
+.d14-dump__v--error {
+  color: var(--d14-active);
+}
+
+.d14-res .d14-res__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 24px;
+}

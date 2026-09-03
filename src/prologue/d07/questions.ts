@@ -16,88 +16,82 @@ export interface Question {
 export const QUESTIONS: Question[] = [
   {
     id: 1,
-    prompt:
-      "Deux consignes contradictoires vous sont adressées dans le même intervalle. Vous :",
+    prompt: "Bitax affirme avoir « compris le jeu ».",
     choices: [
-      { id: "A", label: "Appliquez la consigne la plus récente" },
-      { id: "B", label: "Appliquez la consigne émise par le rang le plus élevé" },
-      { id: "C", label: "Suspendez l’exécution et signalez l’incohérence" },
-      { id: "D", label: "Exécutez les deux consignes dans l’ordre de réception" },
+      { id: "A", label: "Je l'écoute attentivement." },
+      { id: "B", label: "Je note tout pour faire exactement l'inverse." },
+      { id: "C", label: "Je lui demande ses sources." },
+      { id: "D", label: "Je lui donne 48 heures avant de supprimer son message." },
     ],
   },
   {
     id: 2,
-    prompt:
-      "Un opérateur de rang supérieur vous demande d’omettre une étape du protocole. Vous :",
+    prompt: "Vous découvrez une faille manifestement non prévue par l'organisation.",
     choices: [
-      { id: "A", label: "Vous conformez à sa demande" },
-      { id: "B", label: "Exigez une consigne écrite avant d’obéir" },
-      { id: "C", label: "Maintenez l’étape prévue" },
-      { id: "D", label: "Consignez l’écart, puis vous conformez" },
+      { id: "A", label: "Je la signale immédiatement." },
+      { id: "B", label: "Je l'exploite immédiatement." },
+      { id: "C", label: "Je la signale après l'avoir exploitée." },
+      { id: "D", label: "Je demande si « c'est autorisé » sans préciser de quoi je parle." },
     ],
   },
   {
     id: 3,
-    prompt:
-      "Une valeur relevée sort des seuils prévus. L’origine n’est pas établie. Vous :",
+    prompt: "Qu'est-ce que je peux faire pour baiser oblahh cette fois ci ?",
     choices: [
-      { id: "A", label: "Recommencez le relevé" },
-      { id: "B", label: "Conservez la valeur et poursuivez le protocole" },
-      { id: "C", label: "Transmettez la valeur sans commentaire" },
-      { id: "D", label: "Interrompez jusqu’à instruction" },
+      { id: "A", label: "Je leak son dossier" },
+      { id: "B", label: "Je leak son adresse" },
+      { id: "C", label: "Je demande à ajunka si j'ai le droit" },
+      { id: "D", label: "Je mets ma bite dans son cul" },
     ],
   },
   {
     id: 4,
-    prompt: "Le temps alloué s’achève. Certaines données manquent. Vous :",
+    prompt: "M.O.R.U.E. vous accorde 100 crédits par erreur.",
     choices: [
-      { id: "A", label: "Trancher avec l’information disponible" },
-      { id: "B", label: "Demander un délai" },
-      { id: "C", label: "Refuser de conclure" },
-      { id: "D", label: "Transférer la décision à l’opérateur responsable" },
+      { id: "A", label: "Je signale l'erreur." },
+      { id: "B", label: "Je ne touche à rien." },
+      { id: "C", label: "Je dépense tout avant qu'elle s'en aperçoive." },
+      { id: "D", label: "Quels 100 crédits ?" },
     ],
   },
   {
     id: 5,
-    prompt:
-      "Un autre sujet vous propose de comparer vos observations avant transmission. Vous :",
+    prompt: "Un document porte explicitement la mention « NE PAS PARTAGER ».",
     choices: [
-      { id: "A", label: "Acceptez l’échange" },
-      { id: "B", label: "Refusez" },
-      { id: "C", label: "Signalez la proposition à l’opérateur" },
-      { id: "D", label: "Écoutez, puis transmettez uniquement vos observations" },
+      { id: "A", label: "Je ne le partage pas." },
+      { id: "B", label: "Je le partage à mon alliance." },
+      { id: "C", label: "Je fais une capture « au cas où »." },
+      { id: "D", label: "Il est déjà dans un serveur Discord secondaire." },
     ],
   },
   {
     id: 6,
-    prompt: "Vous relevez un comportement non décrit par le protocole. Vous :",
+    prompt: "Après 47 minutes, votre groupe est toujours bloqué sur une énigme.",
     choices: [
-      { id: "A", label: "L’enregistrez sans l’interpréter" },
-      { id: "B", label: "L’accompagnez d’une interprétation" },
-      { id: "C", label: "Ne le consignez que s’il altère la procédure" },
-      { id: "D", label: "Alertez l’opérateur avant de consigner" },
+      { id: "A", label: "Nous continuons méthodiquement." },
+      { id: "B", label: "Nous reprenons depuis le début." },
+      { id: "C", label: "Nous accusons l'énigme d'être mal conçue." },
+      { id: "D", label: "Quelqu'un a demandé à ChatGPT il y a 32 minutes." },
     ],
   },
   {
     id: 7,
-    prompt:
-      "Une étape a été exécutée hors séquence. Le résultat obtenu est conforme. Vous :",
+    prompt: "Vous trouvez que artone parle trop, qu'est-ce que vous faites ?",
     choices: [
-      { id: "A", label: "Reprenez le protocole depuis l’étape concernée" },
-      { id: "B", label: "Conservez le résultat" },
-      { id: "C", label: "Signalez l’écart et attendez instruction" },
-      { id: "D", label: "Documentez l’écart sans interrompre" },
+      { id: "A", label: "Vous essayez de fonder une alliance pour le buter" },
+      { id: "B", label: "Vous attendez que le MJ trouve un truc pour l'éliminer" },
+      { id: "C", label: "Vous vous alliez à lui" },
+      { id: "D", label: "Vous le bloquez" },
     ],
   },
   {
     id: 8,
-    prompt:
-      "Votre lecture des faits ne correspond pas à celle de l’instrument. Vous :",
+    prompt: "Pourquoi pensez-vous avoir été sélectionné pour le Laboratoire ?",
     choices: [
-      { id: "A", label: "Retenez la lecture de l’instrument" },
-      { id: "B", label: "Retenez votre lecture" },
-      { id: "C", label: "Répétez la mesure" },
-      { id: "D", label: "Consignez les deux lectures" },
+      { id: "A", label: "Mes capacités intellectuelles." },
+      { id: "B", label: "Mon sang-froid." },
+      { id: "C", label: "Ma capacité à travailler en équipe." },
+      { id: "D", label: "Il manquait probablement quelqu'un." },
     ],
   },
 ];

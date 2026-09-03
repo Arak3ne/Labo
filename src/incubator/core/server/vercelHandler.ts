@@ -53,7 +53,29 @@ function readForwardedApiPath(request: Request): string | undefined {
 
 export default async function vercelHandler(request: Request): Promise<Response> {
   try {
-    return await getIncubatorServer().dispatchWeb(withPublicApiPath(request));
+    const pubReq = withPublicApiPath(request);
+    const url = new URL(pubReq.url);
+    
+    // Interception pour les réponses du Prologue (D-07)
+    if (pubReq.method === "POST" && url.pathname === "/api/d07-submit") {
+      const data = (await pubReq.json().catch(() => ({}))) as any;
+      
+      // Si un Webhook Discord est configuré, on envoie les réponses
+      if (process.env.DISCORD_WEBHOOK_URL) {
+        const content = `**Nouvelle soumission D-07**\nSujet: \`${data.subjectId}\`\n\`\`\`json\n${JSON.stringify(data.answers, null, 2)}\n\`\`\``;
+        await fetch(process.env.DISCORD_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content })
+        }).catch(err => console.error("Discord Webhook Error:", err));
+      } else {
+        // En attendant d'avoir un webhook, on log juste sur Vercel
+        console.log("D07 Answers received:", data);
+      }
+      return Response.json({ success: true });
+    }
+
+    return await getIncubatorServer().dispatchWeb(pubReq);
   } catch (error) {
     console.error("[labo-api]", error);
     return Response.json({ error: "internal_error" }, { status: 500 });

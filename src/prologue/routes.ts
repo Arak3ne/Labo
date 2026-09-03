@@ -9,6 +9,10 @@ export const prologueRoutes: RouteRecordRaw[] = [
   {
     path: "/terminal/D-14",
     name: "prologue-d14",
-    component: () => import("./ProloguePlaceholder.vue"),
+    component: () => import("./d14/D14Terminal.vue"),
+  },
+  {
+    path: "/terminal/D-14/evaluation",
+    redirect: "/terminal/D-14",
   },
 ];

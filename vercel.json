@@ -9,6 +9,7 @@
   },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api?__labo_path=/api/:path*" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/d07-submit", "destination": "/api?__labo_path=/api/d07-submit" },
+    { "source": "/((?!api/|d07-submit).*)", "destination": "/index.html" }
   ]
 }
