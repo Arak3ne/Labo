@@ -21,12 +21,25 @@ import {
 } from "./config";
 import { useD14Machine } from "./useD14Machine";
 
+function mockPatternOk(ok: boolean): void {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    ),
+  );
+}
+
 describe("D-14 machine", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
-  it("walks idle → boot → recovery → restore → lock success → desktop", () => {
+  it("walks idle → boot → recovery → restore → lock success → desktop", async () => {
     vi.useFakeTimers();
     const machine = useD14Machine();
 
@@ -47,7 +60,8 @@ describe("D-14 machine", () => {
     expect(machine.phase.value).toBe("locked");
     expect(machine.lockStatus.value).toBe("idle");
 
-    const accepted = machine.submitPattern([4, 1, 6, 2, 0, 3, 8, 5]);
+    mockPatternOk(true);
+    const accepted = await machine.submitPattern([0, 1, 2]);
     expect(accepted).toBe(true);
     expect(machine.lockStatus.value).toBe("ok");
 
@@ -68,7 +82,7 @@ describe("D-14 machine", () => {
     machine.dispose();
   });
 
-  it("rejects an unknown pattern and returns to idle lock", () => {
+  it("rejects an unknown pattern and returns to idle lock", async () => {
     vi.useFakeTimers();
     const machine = useD14Machine();
     machine.startBoot();
@@ -78,7 +92,8 @@ describe("D-14 machine", () => {
     machine.startRestore();
     vi.advanceTimersByTime(RESTORE_MS);
 
-    const rejected = machine.submitPattern([0, 3, 6, 7, 8]);
+    mockPatternOk(false);
+    const rejected = await machine.submitPattern([0, 3, 6, 7, 8]);
     expect(rejected).toBe(false);
     expect(machine.lockStatus.value).toBe("fail");
     expect(machine.phase.value).toBe("locked");
@@ -89,7 +104,7 @@ describe("D-14 machine", () => {
     machine.dispose();
   });
 
-  it("suspends the lock for one minute after three failed patterns", () => {
+  it("suspends the lock for one minute after three failed patterns", async () => {
     vi.useFakeTimers();
     const machine = useD14Machine();
     machine.startBoot();
@@ -99,28 +114,48 @@ describe("D-14 machine", () => {
     machine.startRestore();
     vi.advanceTimersByTime(RESTORE_MS);
 
-    machine.submitPattern([0, 1, 2]);
+    mockPatternOk(false);
+    await machine.submitPattern([0, 1, 2]);
     vi.advanceTimersByTime(LOCK_FAIL_HOLD_MS);
-    machine.submitPattern([0, 1, 2]);
+    await machine.submitPattern([0, 1, 2]);
     vi.advanceTimersByTime(LOCK_FAIL_HOLD_MS);
-    machine.submitPattern([0, 1, 2]);
+    await machine.submitPattern([0, 1, 2]);
     expect(machine.lockStatus.value).toBe("fail");
     vi.advanceTimersByTime(LOCK_FAIL_HOLD_MS);
     expect(machine.lockStatus.value).toBe("cooldown");
     expect(machine.lockoutRemainingMs.value).toBe(LOCK_COOLDOWN_MS);
-    expect(machine.submitPattern([4, 1, 6, 2, 0, 3, 8, 5])).toBe(false);
+    expect(await machine.submitPattern([0, 1, 2])).toBe(false);
 
     vi.advanceTimersByTime(LOCK_COOLDOWN_MS);
     expect(machine.lockStatus.value).toBe("idle");
     expect(machine.lockoutRemainingMs.value).toBe(0);
 
-    machine.submitPattern([0, 1, 2]);
+    await machine.submitPattern([0, 1, 2]);
     vi.advanceTimersByTime(LOCK_FAIL_HOLD_MS);
-    machine.submitPattern([0, 1, 2]);
+    await machine.submitPattern([0, 1, 2]);
     vi.advanceTimersByTime(LOCK_FAIL_HOLD_MS);
-    machine.submitPattern([0, 1, 2]);
+    await machine.submitPattern([0, 1, 2]);
     vi.advanceTimersByTime(LOCK_FAIL_HOLD_MS);
     expect(machine.lockStatus.value).toBe("cooldown");
+
+    machine.dispose();
+  });
+
+  it("treats a network error as a failed pattern and never unlocks", async () => {
+    vi.useFakeTimers();
+    const machine = useD14Machine();
+    machine.startBoot();
+    vi.advanceTimersByTime(
+      BOOT_LINE_MS * 2 + BOOT_FAIL_LINE_MS * 3 + BOOT_HOLD_DEAD_MS,
+    );
+    machine.startRestore();
+    vi.advanceTimersByTime(RESTORE_MS);
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    const rejected = await machine.submitPattern([0, 1, 2]);
+    expect(rejected).toBe(false);
+    expect(machine.lockStatus.value).toBe("fail");
+    expect(machine.phase.value).toBe("locked");
 
     machine.dispose();
   });

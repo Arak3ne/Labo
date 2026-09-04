@@ -71,8 +71,8 @@ import {
   RES_HOTE_SUFFIX,
   RES_HOTE_ERROR,
 } from "./copy";
+import { requestHostValidation } from "./d14GateClient";
 import { DEFAULT_FOLDER_ID, DESKTOP_FOLDERS, REVOKE_FOLDER_IDS, folderById } from "./desktop";
-import { hostMatches } from "./sealed";
 import { useD14Machine } from "./useD14Machine";
 import "./d14.css";
 import "./d14-com.css";
@@ -88,6 +88,7 @@ const {
   unlockLineCount,
   lockStatus,
   lockoutRemainingMs,
+  patternBusy,
   startBoot,
   startRestore,
   submitPattern,
@@ -107,7 +108,8 @@ const identityGlitch = ref(false);
 const folderGlitch = ref(false);
 const inputHost = ref("");
 const inputDirty = ref(false);
-const hostAccepted = computed(() => hostMatches(inputHost.value));
+const hostAccepted = ref(false);
+const hostBusy = ref(false);
 const fragmentVisible = ref(false);
 const fragmentTruncated = ref(false);
 const voidElias = ref(false);
@@ -336,18 +338,30 @@ function closeFolder(): void {
 
 function cleanHostInput(): void {
   inputHost.value = inputHost.value.toLowerCase().replace(/[^a-z0-9.-]/g, "");
+  hostAccepted.value = false;
+  inputDirty.value = false;
 }
 
-function resolveHost(): void {
-  if (lockedInteraction.value) return;
+async function resolveHost(): Promise<void> {
+  if (lockedInteraction.value || hostBusy.value) return;
   inputDirty.value = true;
-  if (hostMatches(inputHost.value)) {
-    window.open(
-      `https://${inputHost.value}${RES_HOTE_SUFFIX}/wiki/`,
-      "_blank",
-      "noopener,noreferrer",
-    );
+  hostAccepted.value = false;
+  hostBusy.value = true;
+  let accepted = false;
+  try {
+    accepted = await requestHostValidation(inputHost.value);
+  } catch {
+    // Network/API errors never open the resource.
+  } finally {
+    hostBusy.value = false;
   }
+  if (!accepted) return;
+  hostAccepted.value = true;
+  window.open(
+    `https://${inputHost.value}${RES_HOTE_SUFFIX}/wiki/`,
+    "_blank",
+    "noopener,noreferrer",
+  );
 }
 
 function onFileClick(): void {
@@ -528,6 +542,7 @@ watch(phase, (next) => {
     // Ne plus ouvrir de dossier par défaut, on laisse le panneau sur "Dernière communication"
     inputHost.value = "";
     inputDirty.value = false;
+    hostAccepted.value = false;
   }
 });
 
@@ -897,7 +912,7 @@ onUnmounted(clearLocal);
                 ? 'd14-lock-label'
                 : 'd14-lock-label d14-lock-feedback'
             "
-            :disabled="lockStatus !== 'idle'"
+            :disabled="lockStatus !== 'idle' || patternBusy"
             :status="lockStatus === 'ok' || lockStatus === 'fail' ? lockStatus : 'idle'"
             @submit="submitPattern"
           />

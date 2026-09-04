@@ -1,7 +1,7 @@
 /**
  * Terminal D-14 — constantes de rythme.
  *
- * Le schéma d’accès n’est pas stocké ici. Voir `sealed.ts`.
+ * Le schéma d’accès et l’hôte Miraheze sont validés côté serveur.
  *
  * DEV (`import.meta.env.DEV` uniquement) — query string :
  *   /terminal/D-14?d14=desktop  → saute à l’environnement local (après lock)
@@ -63,5 +63,3 @@ export function readD14DevSkip(
   if (!isDev) return null;
   return parseD14Skip(search);
 }
-
-export { patternsMatch } from "./sealed";

@@ -1,5 +1,7 @@
 import vercelHandler from "./vercelHandler.js";
 
+export { handleValidateHost, handleValidatePattern } from "../../../prologue/d14/server/d14Validate.js";
+
 export const config = {
   runtime: "nodejs",
   maxDuration: 10,

@@ -5,6 +5,12 @@
   "functions": {
     "api/index.js": {
       "includeFiles": "dist-server/**"
+    },
+    "api/validate-pattern.js": {
+      "includeFiles": "dist-server/**"
+    },
+    "api/validate-host.js": {
+      "includeFiles": "dist-server/**"
     }
   },
   "rewrites": [

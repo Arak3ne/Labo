@@ -1,3 +1,4 @@
+import { handleValidateHost, handleValidatePattern } from "../../../prologue/d14/server/d14Validate.js";
 import { createMemoryAccessGrantLedger } from "./accessGrantLedger.js";
 import {
   createIncubatorNodeServer,
@@ -56,6 +57,13 @@ export default async function vercelHandler(request: Request): Promise<Response>
     const pubReq = withPublicApiPath(request);
     const url = new URL(pubReq.url);
     
+    if (url.pathname === "/api/validate-pattern") {
+      return handleValidatePattern(pubReq);
+    }
+    if (url.pathname === "/api/validate-host") {
+      return handleValidateHost(pubReq);
+    }
+
     // Interception pour les réponses du Prologue (D-07)
     if (pubReq.method === "POST" && url.pathname === "/api/d07-submit") {
       const data = (await pubReq.json().catch(() => ({}))) as any;

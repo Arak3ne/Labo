@@ -15,7 +15,8 @@
   },
   "include": [
     "src/incubator/core/**/*.ts",
-    "src/incubator/types/**/*.ts"
+    "src/incubator/types/**/*.ts",
+    "src/prologue/d14/server/**/*.ts"
   ],
   "exclude": ["src/**/*.test.ts"]
 }

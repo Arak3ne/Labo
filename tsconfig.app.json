@@ -12,5 +12,9 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
-  "exclude": ["src/**/*.test.ts", "src/incubator/core/server/**/*.ts"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/incubator/core/server/**/*.ts",
+    "src/prologue/d14/server/**/*.ts"
+  ]
 }

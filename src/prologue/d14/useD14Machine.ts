@@ -22,11 +22,11 @@ import {
   RESTORE_MS,
   UNLOCK_LINE_AT_MS,
   VOID_HOLD_MS,
-  patternsMatch,
   prefersReducedMotion,
   type D14DevSkip,
 } from "./config";
 import { BOOT_LINES, RECOVERY_LINES, RESTORE_LINES } from "./copy";
+import { requestPatternValidation } from "./d14GateClient";
 
 export type D14Phase =
   | "idle"
@@ -60,6 +60,7 @@ export function useD14Machine(options: D14MachineOptions = {}) {
   const unlockLineCount = ref(0);
   const lockStatus = ref<LockStatus>("idle");
   const lockoutRemainingMs = ref(0);
+  const patternBusy = ref(false);
   let failStreak = 0;
   let lockoutInterval: ReturnType<typeof setInterval> | 0 = 0;
 
@@ -165,15 +166,27 @@ export function useD14Machine(options: D14MachineOptions = {}) {
     later(LOCK_COOLDOWN_MS, endLockout);
   }
 
-  function submitPattern(nodes: readonly number[]): boolean {
+  async function submitPattern(nodes: readonly number[]): Promise<boolean> {
+    if (phase.value !== "locked" || lockStatus.value !== "idle" || patternBusy.value) {
+      return false;
+    }
+    patternBusy.value = true;
+    let accepted = false;
+    try {
+      accepted = await requestPatternValidation(nodes);
+    } catch {
+      // Network/API errors never unlock.
+    } finally {
+      patternBusy.value = false;
+    }
     if (phase.value !== "locked" || lockStatus.value !== "idle") return false;
-    if (patternsMatch(nodes)) {
+    if (accepted) {
       failStreak = 0;
       lockStatus.value = "ok";
       audio.lock_ok();
       try {
         localStorage.setItem("d14_compromised", "true");
-      } catch (e) {
+      } catch {
         // ignore
       }
       later(motionMs(LOCK_OK_HOLD_MS), startUnlocking);
@@ -309,6 +322,7 @@ export function useD14Machine(options: D14MachineOptions = {}) {
     unlockLineCount,
     lockStatus,
     lockoutRemainingMs,
+    patternBusy,
     startBoot,
     startRestore,
     submitPattern,

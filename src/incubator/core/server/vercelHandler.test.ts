@@ -6,6 +6,8 @@ const globalForLabo = globalThis as typeof globalThis & {
 };
 
 const previousVercel = process.env.VERCEL;
+const previousPattern = process.env.D14_PATTERN;
+const previousHost = process.env.D14_HOST;
 
 afterEach(async () => {
   const app = globalForLabo.__laboIncubatorServer;
@@ -13,6 +15,10 @@ afterEach(async () => {
   await app?.close();
   if (previousVercel === undefined) delete process.env.VERCEL;
   else process.env.VERCEL = previousVercel;
+  if (previousPattern === undefined) delete process.env.D14_PATTERN;
+  else process.env.D14_PATTERN = previousPattern;
+  if (previousHost === undefined) delete process.env.D14_HOST;
+  else process.env.D14_HOST = previousHost;
 });
 
 describe("Vercel incubator adapter", () => {
@@ -49,6 +55,40 @@ describe("Vercel incubator adapter", () => {
       { method: "POST" },
     ));
     expect(finger.status).toBe(401);
+  });
+
+  it("answers POST /api/validate-pattern without unlocking on a miss", async () => {
+    process.env.VERCEL = "1";
+    process.env.D14_PATTERN = "1,2,3";
+    const miss = await vercelHandler(new Request("http://localhost/api/validate-pattern", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pattern: [0, 1] }),
+    }));
+    const hit = await vercelHandler(new Request("http://localhost/api/validate-pattern", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pattern: [1, 2, 3] }),
+    }));
+    expect(await miss.json()).toEqual({ ok: false });
+    expect(await hit.json()).toEqual({ ok: true });
+  });
+
+  it("answers POST /api/validate-host after normalizing the hostname", async () => {
+    process.env.VERCEL = "1";
+    process.env.D14_HOST = "example-host";
+    const miss = await vercelHandler(new Request("http://localhost/api/validate-host", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ host: "other" }),
+    }));
+    const hit = await vercelHandler(new Request("http://localhost/api/validate-host", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ host: " Example-Host " }),
+    }));
+    expect(await miss.json()).toEqual({ ok: false });
+    expect(await hit.json()).toEqual({ ok: true });
   });
 
   it("recovers the public API path after a Vercel rewrite to /api", async () => {
