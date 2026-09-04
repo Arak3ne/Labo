@@ -110,7 +110,6 @@ export const COM_LINES = [
 export const COM_STATUS = "NON TRANSMIS";
 
 export const RES_TITLE = "RESSOURCE EXTERNE ASSOCIÉE";
-export const RES_HOTE_EXPECTED = "ceres";
 export const RES_HOTE_PLACEHOLDER = "[ ............ ]";
 export const RES_HOTE_SUFFIX = ".miraheze.org";
 export const RES_HOTE_ERROR = "HÔTE NON RÉSOLU";

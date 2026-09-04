@@ -67,12 +67,12 @@ import {
   COM_LINES,
   COM_STATUS,
   RES_TITLE,
-  RES_HOTE_EXPECTED,
   RES_HOTE_PLACEHOLDER,
   RES_HOTE_SUFFIX,
   RES_HOTE_ERROR,
 } from "./copy";
 import { DEFAULT_FOLDER_ID, DESKTOP_FOLDERS, REVOKE_FOLDER_IDS, folderById } from "./desktop";
+import { hostMatches } from "./sealed";
 import { useD14Machine } from "./useD14Machine";
 import "./d14.css";
 import "./d14-com.css";
@@ -107,6 +107,7 @@ const identityGlitch = ref(false);
 const folderGlitch = ref(false);
 const inputHost = ref("");
 const inputDirty = ref(false);
+const hostAccepted = computed(() => hostMatches(inputHost.value));
 const fragmentVisible = ref(false);
 const fragmentTruncated = ref(false);
 const voidElias = ref(false);
@@ -340,8 +341,12 @@ function cleanHostInput(): void {
 function resolveHost(): void {
   if (lockedInteraction.value) return;
   inputDirty.value = true;
-  if (inputHost.value === RES_HOTE_EXPECTED) {
-    window.open(`https://${RES_HOTE_EXPECTED}/wiki/`, "_blank", "noopener,noreferrer");
+  if (hostMatches(inputHost.value)) {
+    window.open(
+      `https://${inputHost.value}${RES_HOTE_SUFFIX}/wiki/`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   }
 }
 
@@ -818,13 +823,13 @@ onUnmounted(clearLocal);
                   <span class="d14-dump__k">HÔTE</span>
                   <div
                     class="d14-res__input-group"
-                    :class="{ 'd14-res__input-group--error': inputDirty && inputHost !== RES_HOTE_EXPECTED }"
+                    :class="{ 'd14-res__input-group--error': inputDirty && !hostAccepted }"
                   >
                     <input
                       v-model="inputHost"
                       type="text"
                       class="d14-res__input"
-                      :class="{ 'd14-res__input--error': inputDirty && inputHost !== RES_HOTE_EXPECTED }"
+                      :class="{ 'd14-res__input--error': inputDirty && !hostAccepted }"
                       :placeholder="RES_HOTE_PLACEHOLDER"
                       spellcheck="false"
                       autocomplete="off"
@@ -834,7 +839,7 @@ onUnmounted(clearLocal);
                     <span class="d14-res__suffix">{{ RES_HOTE_SUFFIX }}</span>
                   </div>
                 </label>
-                <p class="d14-dump__row" v-if="inputDirty && inputHost !== RES_HOTE_EXPECTED">
+                <p class="d14-dump__row" v-if="inputDirty && !hostAccepted">
                   <span class="d14-dump__k"></span>
                   <span class="d14-dump__v d14-dump__v--error">{{ RES_HOTE_ERROR }}</span>
                 </p>

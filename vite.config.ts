@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
       }),
       glsl(),
     ],
+    build: {
+      sourcemap: false,
+    },
     server: {
       proxy: {
         '/api': { target: serverTarget, changeOrigin: false },

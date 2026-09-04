@@ -1,21 +1,13 @@
 /**
- * Terminal D-14 — constantes de rythme et de schéma.
+ * Terminal D-14 — constantes de rythme.
  *
- * PATTERN : grille 3×3.
- * Numérotation joueur (1–9)     index interne (0–8)
- *   1  2  3                       0  1  2
- *   4  5  6                       3  4  5
- *   7  8  9                       6  7  8
- * Séquence : 5 → 2 → 7 → 3 → 1 → 4 → 9 → 6
- * Pour changer le schéma, modifier uniquement `D14_PATTERN`.
+ * Le schéma d’accès n’est pas stocké ici. Voir `sealed.ts`.
  *
  * DEV (`import.meta.env.DEV` uniquement) — query string :
  *   /terminal/D-14?d14=desktop  → saute à l’environnement local (après lock)
  *   /terminal/D-14?d14=climax   → saute au début de la détection (scène film)
  * En production ces paramètres sont ignorés.
  */
-
-export const D14_PATTERN: number[] = [4, 1, 6, 2, 0, 3, 8, 5];
 
 export const DELAY_BEFORE_DETECTION_MS = 180;
 
@@ -72,10 +64,4 @@ export function readD14DevSkip(
   return parseD14Skip(search);
 }
 
-export function patternsMatch(
-  input: readonly number[],
-  expected: readonly number[] = D14_PATTERN,
-): boolean {
-  if (input.length !== expected.length) return false;
-  return input.every((node, index) => node === expected[index]);
-}
+export { patternsMatch } from "./sealed";
